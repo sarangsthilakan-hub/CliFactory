@@ -1,6 +1,6 @@
 import os
 import random
-from factory_logic import (
+from factory_core import (
     create_initial_game_state,
     is_bankrupt,
     has_achieved_monopoly,
@@ -50,7 +50,6 @@ def run_game():
     state = create_initial_game_state(diff_name, starting_capital, guaranteed_months)
 
     while True:
-        # Check Loss Condition
         if is_bankrupt(state):
             clear_screen()
             print("=" * 75)
@@ -62,7 +61,6 @@ def run_game():
             input("\nPress Enter to exit CliFactory...")
             break
 
-        # Check Victory Condition
         if has_achieved_monopoly(state):
             clear_screen()
             print("=" * 75)
@@ -76,7 +74,6 @@ def run_game():
 
         clear_screen()
 
-        # Render Dashboard Header & Status Panel
         factory_title = get_current_factory_title(state)
         header_left = f"🏭 CLIFACTORY [{state['difficulty_name'].upper()}]"
         header_right = f"📅 MONTH: {state['current_month']}"
@@ -121,7 +118,6 @@ def run_game():
         )
         print("-" * 75)
 
-        # Main Interface Menu
         print(" CHOOSE YOUR ACTIONS:")
         print("\n [MAJOR ACTIONS (Max 1 per month)]")
         if not state["major_action_taken"] and not state["skip_next_major"]:
@@ -269,11 +265,11 @@ def run_game():
 
             input("\nPress Enter to return to the dashboard...")
 
-        # Handle Minor Actions Sub-Menu [6]
+        # Handle Minor Actions Sub-Menu [6] (Fully Restored)
         elif choice == "6":
             if state["minor_actions_used"] >= state["max_minor_actions"]:
                 clear_screen()
-                input("\n[!] You have no Minor Actions left this month! Press Enter.")
+                input("\n[!] You have no Minor Actions left this month! Press Enter to continue.")
                 continue
 
             clear_screen()
@@ -281,26 +277,291 @@ def run_game():
             print("               🛠️ TACTICAL MINOR ACTIONS MENU               ")
             print("=" * 65)
             print(" Select Category:")
-            print("   [1] Operations")
-            print("   [2] Maintenance")
-            print("   [3] Market")
-            print("   [4] Logistics")
-            print("   [5] Human Capital")
-            print("   [6] Return")
+            print("   [1] Operations (3 Positive | 2 Risky)")
+            print("   [2] Maintenance (3 Positive | 2 Risky)")
+            print("   [3] Market (2 Positive | 3 Risky)")
+            print("   [4] Logistics (2 Positive | 3 Risky)")
+            print("   [5] Human Capital (2 Positive | 3 Risky)")
+            print("   [6] Return to Dashboard")
             print("-" * 65)
 
-            cat = input("Select category (1-6): ").strip()
-            if cat in ["1", "2", "3", "4", "5"]:
+            cat_choice = input("Select category (1-6): ").strip()
+
+            if cat_choice == "1":
+                if state["operations_locked_turns"] > 0:
+                    input("\n[!] Operations is currently locked due to safety infractions! Press Enter.")
+                    continue
+
+                print("\n OPERATIONS ACTIONS:")
+                print("   [1] Workflow Audit (Positive): Recovers +$30 Capital in savings.")
+                print("   [2] Internal Line Shift (Positive): Converts 5 Raw to 3 Finished Goods instantly.")
+                print("   [3] Energy Grid Calibration (Positive): Grants -$15 discount on next month's upkeep.")
+                print("   [4] Speed Up Belt Feeders (Risky): +3 Finished Goods, but jams system (-5 Raw scrap).")
+                print(
+                    "   [5] Bypass Safety Checkpoints (Risky): Saves +$20 inspection fees, but risks locking Operations.")
+
+                op_act = input("Select action (1-5): ").strip()
                 state["minor_actions_used"] += 1
                 clear_screen()
-                print(f"\n[Tactical Action Executed Successfully for Category {cat}]")
+
+                if op_act == "1":
+                    state["capital"] += 30
+                    print("\n[Workflow Audit Successful]: Recovered +$30 Capital in operational savings.")
+                elif op_act == "2":
+                    if state["raw_materials"] >= 5:
+                        state["raw_materials"] -= 5
+                        state["finished_goods"] += 3
+                        print("\n[Internal Line Shift Successful]: Converted 5 Raw Materials into 3 Finished Goods.")
+                    else:
+                        print("\n[Failed]: Not enough Raw Materials (need 5). Action wasted.")
+                elif op_act == "3":
+                    state["base_maintenance_cost"] = max(0, state["base_maintenance_cost"] - 15)
+                    print("\n[Grid Calibration Successful]: Next month's upkeep discounted by -$15.")
+                elif op_act == "4":
+                    risk_roll = random.random()
+                    effective_risk = max(0.05,
+                                         state["negative_event_chance"] - (state["research_levels"]["safety"] * 0.04))
+                    if risk_roll < effective_risk:
+                        if state["raw_materials"] >= 5:
+                            state["raw_materials"] -= 5
+                        state["finished_goods"] += 3
+                        print(
+                            f"\n[Belt Speeding Mishap (Risk Triggered)]: System jammed! Gained 3 goods but lost 5 Raw materials to scrap.")
+                    else:
+                        state["finished_goods"] += 3
+                        print(
+                            f"\n[Belt Speeding Safe]: Executed cleanly with zero scrap loss! Gained +3 Finished Goods.")
+                elif op_act == "5":
+                    risk_roll = random.random()
+                    effective_risk = max(0.05,
+                                         state["negative_event_chance"] - (state["research_levels"]["safety"] * 0.04))
+                    if risk_roll < effective_risk:
+                        state["operations_locked_turns"] = 1
+                        print(
+                            f"\n[Checkpoint Violation Caught (Risk Triggered)]: Saved $20 but got caught! Operations locked for 1 turn.")
+                    else:
+                        state["capital"] += 20
+                        print(f"\n[Checkpoint Evaded Safely]: Saved +$20 inspection fees with zero penalties incurred!")
+                input("\nPress Enter to return to dashboard...")
+
+            elif cat_choice == "2":
+                print("\n MAINTENANCE ACTIONS:")
+                print("   [1] Preventative System Check (Positive): Consumes -5 Raw for parts, shaves -$25 upkeep.")
+                print("   [2] Equipment Recalibration (Positive): Boosts next Major Action yield/success by +5%.")
+                print("   [3] Tooling Salvage (Positive): Reclaims spare parts for +5 Raw Materials.")
+                print(
+                    "   [4] Deferred Maintenance Sweep (Risky): Gains +$20 Capital, but risks a -$50 breakdown next turn.")
+                print("   [5] Patchwork Wire Job (Risky): Fixes fault cheaply, but risks destroying 3 Finished Goods.")
+
+                maint_act = input("Select action (1-5): ").strip()
+                state["minor_actions_used"] += 1
+                clear_screen()
+
+                if maint_act == "1":
+                    if state["raw_materials"] >= 5:
+                        state["raw_materials"] -= 5
+                        state["base_maintenance_cost"] = max(0, state["base_maintenance_cost"] - 25)
+                        print(
+                            "\n[Preventative Check Successful]: Shaved -$25 off monthly upkeep using 5 Raw Materials.")
+                    else:
+                        print("\n[Failed]: Not enough Raw Materials (need 5).")
+                elif maint_act == "2":
+                    state["next_major_yield_bonus"] += 0.05
+                    print("\n[Equipment Recalibrated]: Next Major Action success/yield boosted by +5%.")
+                elif maint_act == "3":
+                    state["raw_materials"] += 5
+                    print("\n[Tooling Salvage Successful]: Reclaimed +5 Raw Materials.")
+                elif maint_act == "4":
+                    risk_roll = random.random()
+                    effective_risk = max(0.05,
+                                         state["negative_event_chance"] - (state["research_levels"]["safety"] * 0.04))
+                    if risk_roll < effective_risk:
+                        state["capital"] -= 30
+                        print(
+                            f"\n[Deferred Breakdown (Risk Triggered)]: Gained $20 now, but equipment broke down costing -$50 total repairs!")
+                    else:
+                        state["capital"] += 20
+                        print(
+                            f"\n[Deferred Sweep Safe]: Skipped repairs cleanly and pocketed +$20 Capital with no breakdown!")
+                elif maint_act == "5":
+                    risk_roll = random.random()
+                    effective_risk = max(0.05,
+                                         state["negative_event_chance"] - (state["research_levels"]["safety"] * 0.04))
+                    if risk_roll < effective_risk and state["finished_goods"] >= 3:
+                        state["finished_goods"] -= 3
+                        print(
+                            f"\n[Wire Job Short-Circuit (Risk Triggered)]: Fixed cheap, but auxiliary surge destroyed 3 Finished Goods.")
+                    else:
+                        print(f"\n[Wire Job Successful]: Fixed fault cleanly with zero stock loss!")
+                input("\nPress Enter to return to dashboard...")
+
+            elif cat_choice == "3":
+                print("\n MARKET ACTIONS:")
+                print("   [1] Spot Market Sale (Positive): Instantly sells up to 5 Finished Goods for +$100.")
+                print("   [2] Micro Future Hedge (Positive): Locks in +$15 Capital bonus on market sales this turn.")
+                print("   [3] Fire-Sale Dumping (Risky): Offloads 10 goods quickly, but risks depressing market price.")
+                print("   [4] Sub-Contract Freight (Risky): Pays -$20 to rush delivery, but risks losing 2 goods.")
+                print("   [5] Speculative Currency Hold (Risky): Trades currency, but risks a -$25 fluctuation loss.")
+
+                mkt_act = input("Select action (1-5): ").strip()
+                state["minor_actions_used"] += 1
+                clear_screen()
+
+                if mkt_act == "1":
+                    sold_qty = min(state["finished_goods"], 5)
+                    if sold_qty > 0:
+                        state, earned, sold = execute_sales_contract(state, sold_qty)
+                        print(f"\n[Spot Sale Successful]: Sold {sold} goods instantly for ${earned:.2f}.")
+                    else:
+                        print("\n[Failed]: No finished goods available.")
+                elif mkt_act == "2":
+                    state["capital"] += 15
+                    print("\n[Future Hedge Successful]: Acquired +$15 Capital hedge bonus.")
+                elif mkt_act == "3":
+                    risk_roll = random.random()
+                    effective_risk = max(0.05, state["negative_event_chance"])
+                    if risk_roll < effective_risk:
+                        state["market_price_multiplier"] = max(10.0, state["market_price_multiplier"] - 5.0)
+                        print(
+                            f"\n[Fire-Sale Overload (Risk Triggered)]: Dumped goods, but depressed market prices to ${state['market_price_multiplier']} per unit!")
+                    else:
+                        sold_qty = min(state["finished_goods"], 10)
+                        if sold_qty > 0:
+                            state, earned, sold = execute_sales_contract(state, sold_qty)
+                            print(f"\n[Fire-Sale Safe]: Offloaded {sold} goods at normal rates for ${earned:.2f}!")
+                        else:
+                            print("\n[Safe]: No goods to dump, hedge completed safely.")
+                elif mkt_act == "4":
+                    risk_roll = random.random()
+                    effective_risk = max(0.05, state["negative_event_chance"])
+                    if risk_roll < effective_risk and state["finished_goods"] >= 2:
+                        state["finished_goods"] -= 2
+                        state["capital"] -= 20
+                        print(
+                            f"\n[Freight Mishap (Risk Triggered)]: Paid $20 rush fee, but handling mishandling lost 2 Finished Goods.")
+                    else:
+                        state["capital"] -= 20
+                        print(f"\n[Freight Safe]: Paid $20 rush fee and delivered stock cleanly with zero damage!")
+                elif mkt_act == "5":
+                    risk_roll = random.random()
+                    effective_risk = max(0.05, state["negative_event_chance"])
+                    if risk_roll < effective_risk:
+                        state["capital"] -= 25
+                        print(
+                            f"\n[Currency Fluctuation Loss (Risk Triggered)]: Currency dropped, deducting -$25 Capital.")
+                    else:
+                        state["capital"] += 10
+                        print(
+                            f"\n[Currency Speculation Win]: Market swung favorably, granting +$10 Capital instead of a loss!")
+                input("\nPress Enter to return to dashboard...")
+
+            elif cat_choice == "4":
+                print("\n LOGISTICS ACTIONS:")
+                print("   [1] Scrap Metal Recycling (Positive): Recycles waste into +$25 Capital.")
+                print("   [2] Route Optimization (Positive): Cuts shipping overhead by +$2 per sale transaction.")
+                print("   [3] Emergency Cargo Express (Risky): Pays -$25 for +10 Raw, but risks transit delays.")
+                print("   [4] Warehouse Overfill (Risky): Accepts extra shipment, but risks storage penalty.")
+                print("   [5] Unlicensed Courier (Risky): Hires cheap transport, but risks cargo impoundment.")
+
+                log_act = input("Select action (1-5): ").strip()
+                state["minor_actions_used"] += 1
+                clear_screen()
+
+                if log_act == "1":
+                    state["capital"] += 25
+                    print("\n[Recycling Successful]: Recycled factory waste into +$25 Capital.")
+                elif log_act == "2":
+                    state["market_price_multiplier"] += 2.0
+                    print("\n[Route Optimized]: Permanent transaction shipping overhead value added.")
+                elif log_act == "3":
+                    risk_roll = random.random()
+                    effective_risk = max(0.05, state["negative_event_chance"])
+                    if risk_roll < effective_risk:
+                        state["capital"] -= 25
+                        print(
+                            f"\n[Cargo Delay (Risk Triggered)]: Paid $25 premium, but shipment got stuck in customs with zero delivery.")
+                    else:
+                        state["raw_materials"] += 10
+                        state["capital"] -= 25
+                        print(f"\n[Cargo Express Safe]: Paid $25 and instantly received +10 Raw Materials!")
+                elif log_act == "4":
+                    risk_roll = random.random()
+                    effective_risk = max(0.05, state["negative_event_chance"])
+                    if risk_roll < effective_risk:
+                        state["capital"] -= 15
+                        print(
+                            f"\n[Storage Overfill Penalty (Risk Triggered)]: Overflow incurred a -$15 storage penalty.")
+                    else:
+                        state["raw_materials"] += 15
+                        print(f"\n[Overfill Handled Cleanly]: Stored extra stock safely with zero penalty fees!")
+                elif log_act == "5":
+                    risk_roll = random.random()
+                    effective_risk = max(0.05, state["negative_event_chance"])
+                    if risk_roll < effective_risk:
+                        state["capital"] -= 10
+                        print(f"\n[Courier Impound (Risk Triggered)]: Cheap courier intercepted; -$10 fee lost.")
+                    else:
+                        state["raw_materials"] += 5
+                        print(f"\n[Courier Safe]: Cheap transport delivered +5 raw materials without getting caught!")
+                input("\nPress Enter to return to dashboard...")
+
+            elif cat_choice == "5":
+                print("\n HUMAN CAPITAL ACTIONS:")
+                print("   [1] Floor Team Commendation (Positive): Boosts next Major Action success/yield by +10%.")
+                print("   [2] Apprentice Training Shift (Positive): Generates +3 Raw Materials safely.")
+                print("   [3] Mandatory Overtime Push (Risky): Gains +5 Raw, but risks raising upkeep friction.")
+                print("   [4] Cut Shift Break Times (Risky): Gains +$20 Capital, but risks production slowdowns.")
+                print("   [5] Emergency Temp Workers (Risky): Spends -$30 to hire help, but risks ruined materials.")
+
+                hr_act = input("Select action (1-5): ").strip()
+                state["minor_actions_used"] += 1
+                clear_screen()
+
+                if hr_act == "1":
+                    state["next_major_yield_bonus"] += 0.10
+                    print("\n[Morale Boosted]: Next Major Action success/yield increased by +10%.")
+                elif hr_act == "2":
+                    state["raw_materials"] += 3
+                    print("\n[Apprentice Training Successful]: Generated +3 Raw Materials.")
+                elif hr_act == "3":
+                    risk_roll = random.random()
+                    effective_risk = max(0.05, state["negative_event_chance"])
+                    if risk_roll < effective_risk:
+                        state["base_maintenance_cost"] += 10
+                        print(
+                            f"\n[Union Friction (Risk Triggered)]: Gathered goods, but friction increased next month's upkeep by +$10.")
+                    else:
+                        state["raw_materials"] += 5
+                        print(f"\n[Overtime Push Safe]: Harvested +5 Raw Materials with zero union friction!")
+                elif hr_act == "4":
+                    risk_roll = random.random()
+                    effective_risk = max(0.05, state["negative_event_chance"])
+                    if risk_roll < effective_risk:
+                        print(
+                            f"\n[Worker Fatigue (Risk Triggered)]: Gained $20 now, but fatigue caused a minor slowdown next turn.")
+                    else:
+                        state["capital"] += 20
+                        print(
+                            f"\n[Break Times Cut Safely]: Secured +$20 Capital in labor savings with zero fatigue penalties!")
+                elif hr_act == "5":
+                    risk_roll = random.random()
+                    effective_risk = max(0.05, state["negative_event_chance"])
+                    if risk_roll < effective_risk:
+                        state["capital"] -= 30
+                        print(
+                            f"\n[Temp Worker Blunder (Risk Triggered)]: Spent $30, but untrained temp workers ruined 5 Raw Materials.")
+                    else:
+                        state["raw_materials"] += 10
+                        state["capital"] -= 30
+                        print(
+                            f"\n[Temp Workers Proficient]: Spent $30 and temp staff helped secure +10 Raw Materials cleanly!")
                 input("\nPress Enter to return to dashboard...")
 
         # Handle Sales Contract [7]
         elif choice == "7":
             if state["minor_actions_used"] >= state["max_minor_actions"]:
                 clear_screen()
-                input("\n[!] You have no Minor Actions left this month! Press Enter.")
+                input("\n[!] You have no Minor Actions left this month! Press Enter to continue.")
                 continue
 
             state["minor_actions_used"] += 1

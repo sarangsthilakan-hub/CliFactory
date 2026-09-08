@@ -1,10 +1,7 @@
 import random
 
 
-# --- INITIALIZATION LOGIC ---
-
 def create_initial_game_state(difficulty_name, starting_capital, guaranteed_months):
-    """Creates and returns the initial immutable game state dictionary."""
     return {
         "difficulty_name": difficulty_name,
         "capital": starting_capital,
@@ -54,30 +51,22 @@ def create_initial_game_state(difficulty_name, starting_capital, guaranteed_mont
     }
 
 
-# --- CONDITION CHECKERS ---
-
 def is_bankrupt(game_state):
-    """Returns True if capital has dropped to zero or below."""
     return game_state["capital"] <= 0
 
 
 def has_achieved_monopoly(game_state):
-    """Returns True if capital and output meet monopoly victory conditions."""
     total_output_rate = 18 + (game_state["factory_expansion_tier"] * 15)
     return game_state["capital"] >= 10000.0 and total_output_rate >= 100
 
 
 def get_current_factory_title(game_state):
-    """Returns the descriptive name of the factory based on its expansion tier."""
     tiers = game_state["factory_tier_names"]
     tier_index = min(game_state["factory_expansion_tier"], len(tiers) - 1)
     return tiers[tier_index]
 
 
-# --- STATE TRANSFORMATION FUNCTIONS ---
-
 def execute_factory_expansion(game_state, strategy_type):
-    """Applies factory expansion effects based on chosen strategy."""
     state = game_state.copy()
     state["capital"] -= state["expansion_cost"]
     state["factory_expansion_tier"] += 1
@@ -92,14 +81,13 @@ def execute_factory_expansion(game_state, strategy_type):
     elif strategy_type == "3":  # Cost-Cutting Focus
         state["base_maintenance_cost"] += 5
         state["negative_event_chance"] += 0.15
-    else:  # Default / Balanced
+    else:  # Balanced Default
         state["base_maintenance_cost"] += 20
 
     return state
 
 
 def execute_rd_investment(game_state, selected_field):
-    """Processes R&D investments, updating technology levels and dynamic stats."""
     state = game_state.copy()
     state["capital"] -= 100
     state["major_action_taken"] = True
@@ -107,7 +95,6 @@ def execute_rd_investment(game_state, selected_field):
     state["research_levels"][selected_field] += 1
     tier = state["research_levels"][selected_field]
 
-    # Apply specific technological upgrades
     if selected_field == "logistics":
         if tier == 1:
             state["base_maintenance_cost"] = max(0, state["base_maintenance_cost"] - 5)
@@ -134,7 +121,6 @@ def execute_rd_investment(game_state, selected_field):
 
 
 def execute_sales_contract(game_state, quantity_to_sell):
-    """Executes a market sale, transferring finished goods into capital."""
     state = game_state.copy()
 
     unit_price = state["market_price_multiplier"]
@@ -145,7 +131,7 @@ def execute_sales_contract(game_state, quantity_to_sell):
 
     if state["futures_contract_active"]:
         unit_price *= 2.5
-        state["futures_contract_active"] = False  # Consumed
+        state["futures_contract_active"] = False
 
     sold_amount = min(quantity_to_sell, state["max_sell_limit"], state["finished_goods"])
     earned_revenue = sold_amount * unit_price
@@ -158,17 +144,16 @@ def execute_sales_contract(game_state, quantity_to_sell):
 
 
 def process_end_of_month_rollover(game_state, cave_in_occurred):
-    """Advances the simulation cycle, applies passive upkeep, extraction, and quotas."""
     state = game_state.copy()
 
-    # 1. Evaluate Futures Contract Quota
+    # Futures Contract Quota Check
     if state["futures_contract_active"]:
         if state["total_goods_sold_this_month"] < state["futures_quota_target"]:
             penalty = state["capital"] * 0.10
             state["capital"] -= penalty
         state["futures_contract_active"] = False
 
-    # 2. Evaluate Marketing Quotas
+    # Marketing Quota Check
     marketing_tier = state["research_levels"]["marketing"]
     quota_targets = {1: 50, 2: 70, 3: 90, 4: 120}
     quota_bonuses = {1: 0.05, 2: 0.10, 3: 0.15, 4: 0.25}
@@ -179,7 +164,7 @@ def process_end_of_month_rollover(game_state, cave_in_occurred):
             bonus_cash = state["capital"] * quota_bonuses[marketing_tier]
             state["capital"] += bonus_cash
 
-    # 3. Passive Mining & Refining
+    # Passive Mining & Refining
     eff_tier = state["research_levels"]["efficiency"]
     mining_bonus = 0
     refining_bonus = 0
@@ -208,10 +193,10 @@ def process_end_of_month_rollover(game_state, cave_in_occurred):
     state["raw_materials"] -= actual_refined
     state["finished_goods"] += actual_refined
 
-    # 4. Maintenance Upkeep
+    # Maintenance Upkeep
     state["capital"] -= state["base_maintenance_cost"]
 
-    # 5. Reset Monthly Counters & Increment Time
+    # Rollover resets
     if state["operations_locked_turns"] > 0:
         state["operations_locked_turns"] -= 1
 
