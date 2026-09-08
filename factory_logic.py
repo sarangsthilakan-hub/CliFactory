@@ -91,14 +91,12 @@ def get_current_factory_title(game_state):
 
 
 def calculate_effective_risk(game_state):
-    """Centralized risk calculator with strict caps (5% floor, 100% ceiling)."""
     safety_tier = game_state["research_levels"]["safety"]
     risk = game_state["negative_event_chance"] - (safety_tier * 0.04)
     return max(0.05, min(1.0, risk))
 
 
 def evaluate_minor_action_risk(game_state):
-    """Returns True if a risky minor action triggers its negative consequence."""
     effective_risk = calculate_effective_risk(game_state)
     return random.random() < effective_risk
 
@@ -121,7 +119,6 @@ def execute_factory_expansion(game_state, strategy_type):
     else:  # Balanced Default
         state["base_maintenance_cost"] += 20
 
-    # Enforce strict ceiling and floor on risk
     state["negative_event_chance"] = max(0.05, min(1.0, state["negative_event_chance"]))
     return state
 

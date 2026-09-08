@@ -45,6 +45,15 @@ def select_difficulty():
             input("\n[!] Invalid choice. Press Enter to try again.")
 
 
+def get_binary_choice():
+    """Strict input validation loop ensuring the user only enters 1 or 2."""
+    while True:
+        choice = input("Select choice (1/2): ").strip()
+        if choice in ["1", "2"]:
+            return choice
+        print("[!] Invalid choice. Please enter 1 or 2.")
+
+
 def handle_monthly_event(state):
     is_positive, event_key = roll_monthly_event(state)
     if not event_key:
@@ -61,10 +70,10 @@ def handle_monthly_event(state):
 
     elif event_key == "subsidy":
         print("\n[Positive]: Government Clean Energy Subsidy!")
-        print("  [A] Accept clean-up infrastructure grant (+$60 Capital & permanent risk reduction)")
-        print("  [B] Take immediate cash payout (+$150 Capital)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Accept clean-up infrastructure grant (+$60 Capital & permanent risk reduction)")
+        print("  [2] Take immediate cash payout (+$150 Capital)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] += 60
             state["negative_event_chance"] = max(0.05, state["negative_event_chance"] - 0.05)
             print("\n-> Accepted grant: +$60 Capital, risk exposure reduced.")
@@ -74,10 +83,10 @@ def handle_monthly_event(state):
 
     elif event_key == "investor":
         print("\n[Positive]: External Investor Interest!")
-        print("  [A] Issue shares for funding (+$250 Capital)")
-        print("  [B] Decline and protect equity")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Issue shares for funding (+$250 Capital)")
+        print("  [2] Decline and protect equity")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] += 250
             print("\n-> Issued shares: +$250 Capital.")
         else:
@@ -85,10 +94,10 @@ def handle_monthly_event(state):
 
     elif event_key == "surplus":
         print("\n[Positive]: Warehouse Liquidation Sale!")
-        print("  [A] Purchase surplus stock (+60 Raw Materials for $30)")
-        print("  [B] Pass on the offer")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A" and state["capital"] >= 30:
+        print("  [1] Purchase surplus stock (+60 Raw Materials for $30)")
+        print("  [2] Pass on the offer")
+        choice = get_binary_choice()
+        if choice == "1" and state["capital"] >= 30:
             state["capital"] -= 30
             state["raw_materials"] += 60
             print("\n-> Purchased surplus: +60 Raw Materials for -$30.")
@@ -97,10 +106,10 @@ def handle_monthly_event(state):
 
     elif event_key == "innovation":
         print("\n[Positive]: Star Employee Innovation!")
-        print("  [A] File a commercial patent (+$100 Capital)")
-        print("  [B] Distribute team bonuses (+10% yield on next Major Action)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] File a commercial patent (+$100 Capital)")
+        print("  [2] Distribute team bonuses (+10% yield on next Major Action)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] += 100
             print("\n-> Filed patent: +$100 Capital.")
         else:
@@ -113,10 +122,10 @@ def handle_monthly_event(state):
 
     elif event_key == "scrap_boom":
         print("\n[Positive]: Scrap Metal Market Boom!")
-        print("  [A] Sell factory scrap reserves (+$120 Capital)")
-        print("  [B] Melt scrap down into raw material (+40 Raw Materials)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Sell factory scrap reserves (+$120 Capital)")
+        print("  [2] Melt scrap down into raw material (+40 Raw Materials)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] += 120
             print("\n-> Sold scrap: +$120 Capital.")
         else:
@@ -130,10 +139,10 @@ def handle_monthly_event(state):
 
     elif event_key == "angel_investor":
         print("\n[Positive]: Angel Investor Syndicate!")
-        print("  [A] Accept equity loan (+$300 Capital, +$15 monthly interest)")
-        print("  [B] Take outright grant (+$120 Capital)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Accept equity loan (+$300 Capital, +$15 monthly interest)")
+        print("  [2] Take outright grant (+$120 Capital)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] += 300
             state["base_maintenance_cost"] += 15
             print("\n-> Loan accepted: +$300 Capital, +$15 monthly upkeep increase.")
@@ -152,10 +161,10 @@ def handle_monthly_event(state):
 
     elif event_key == "merger":
         print("\n[Positive]: Friendly Corporate Merger Offer!")
-        print("  [A] Absorb assets (+30 Finished Goods, -$80 fee)")
-        print("  [B] Decline")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A" and state["capital"] >= 80:
+        print("  [1] Absorb assets (+30 Finished Goods, -$80 fee)")
+        print("  [2] Decline")
+        choice = get_binary_choice()
+        if choice == "1" and state["capital"] >= 80:
             state["capital"] -= 80
             state["finished_goods"] += 30
             print("\n-> Merged assets: +30 Finished Goods for -$80.")
@@ -176,10 +185,10 @@ def handle_monthly_event(state):
 
     elif event_key == "patent_buyout":
         print("\n[Positive]: Secret Patent Buyout!")
-        print("  [A] Sell blueprint outright (+$180 Capital)")
-        print("  [B] Retain rights (+15 Capital every month)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Sell blueprint outright (+$180 Capital)")
+        print("  [2] Retain rights (+15 Capital every month)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] += 180
             print("\n-> Sold patent outright: +$180 Capital.")
         else:
@@ -188,10 +197,10 @@ def handle_monthly_event(state):
 
     elif event_key == "skilled_labor":
         print("\n[Positive]: Skilled Labor Influx!")
-        print("  [A] Hire expert engineers (+10 refining capacity, +$15 wage upkeep)")
-        print("  [B] Pass")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Hire expert engineers (+10 refining capacity, +$15 wage upkeep)")
+        print("  [2] Pass")
+        choice = get_binary_choice()
+        if choice == "1":
             state["base_maintenance_cost"] += 15
             print("\n-> Hired engineers: Upkeep increased by +$15, refining output boosted.")
         else:
@@ -211,10 +220,10 @@ def handle_monthly_event(state):
     # --- NEGATIVE EVENTS HANDLING ---
     elif event_key == "strike":
         print("\n[Negative]: Worker Strikes!")
-        print("  [A] Negotiate living wages (+10 permanent monthly maintenance)")
-        print("  [B] Fire striking workers (Reduce refining capacity by -5 for the month)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Negotiate living wages (+10 permanent monthly maintenance)")
+        print("  [2] Fire striking workers (Reduce refining capacity by -5 for the month)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["base_maintenance_cost"] += 10
             print("\n-> Negotiated wages: Maintenance increased by +$10/mo.")
         else:
@@ -223,10 +232,10 @@ def handle_monthly_event(state):
 
     elif event_key == "audit":
         print("\n[Negative]: Regulatory Safety Audit!")
-        print("  [A] Pay immediate compliance fine (-$80 Capital)")
-        print("  [B] Contest in court (50% chance to pay $0, 50% chance to pay -$160)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Pay immediate compliance fine (-$80 Capital)")
+        print("  [2] Contest in court (50% chance to pay $0, 50% chance to pay -$160)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] -= 80
             print("\n-> Paid fine: -$80 Capital.")
         else:
@@ -247,10 +256,10 @@ def handle_monthly_event(state):
 
     elif event_key == "circuit":
         print("\n[Negative]: Machinery Short-Circuit!")
-        print("  [A] Professional emergency repairs (-$70 Capital)")
-        print("  [B] Makeshift wiring (+$20 permanent maintenance friction drag)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Professional emergency repairs (-$70 Capital)")
+        print("  [2] Makeshift wiring (+$20 permanent maintenance friction drag)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] -= 70
             print("\n-> Professional repairs paid: -$70 Capital.")
         else:
@@ -259,10 +268,10 @@ def handle_monthly_event(state):
 
     elif event_key == "piracy":
         print("\n[Negative]: Supply Chain Piracy / Hijacking!")
-        print("  [A] Hire private security escort (-$50 Capital, blocks future transit thefts)")
-        print("  [B] Write off the loss (-40 Raw Materials)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Hire private security escort (-$50 Capital, blocks future transit thefts)")
+        print("  [2] Write off the loss (-40 Raw Materials)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] -= 50
             print("\n-> Hired security: -$50 Capital. Convoy secured.")
         else:
@@ -271,10 +280,10 @@ def handle_monthly_event(state):
 
     elif event_key == "chemical_leak":
         print("\n[Negative]: Corrosive Chemical Leak!")
-        print("  [A] Hazmat cleanup crew (-$90 Capital)")
-        print("  [B] Internal cleanup (-15 Finished Goods inventory spoiled)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Hazmat cleanup crew (-$90 Capital)")
+        print("  [2] Internal cleanup (-15 Finished Goods inventory spoiled)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] -= 90
             print("\n-> Hazmat crew paid: -$90 Capital.")
         else:
@@ -283,10 +292,10 @@ def handle_monthly_event(state):
 
     elif event_key == "tax_hike":
         print("\n[Negative]: Municipal Property Tax Hike!")
-        print("  [A] Pay increased tax (+$15 permanent monthly maintenance)")
-        print("  [B] File legal appeals (-$50 legal fee, 50% chance to block hike)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Pay increased tax (+$15 permanent monthly maintenance)")
+        print("  [2] File legal appeals (-$50 legal fee, 50% chance to block hike)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["base_maintenance_cost"] += 15
             print("\n-> Paid tax hike: Maintenance increased by +$15/mo.")
         else:
@@ -299,10 +308,10 @@ def handle_monthly_event(state):
 
     elif event_key == "subcontractor_drop":
         print("\n[Negative]: Subcontractor Bankruptcy!")
-        print("  [A] Emergency contract buyout (-$110 Capital)")
-        print("  [B] Suffer shipping bottlenecks (-20 max sell limit for month)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Emergency contract buyout (-$110 Capital)")
+        print("  [2] Suffer shipping bottlenecks (-20 max sell limit for month)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] -= 110
             print("\n-> Buyout paid: -$110 Capital.")
         else:
@@ -311,10 +320,10 @@ def handle_monthly_event(state):
 
     elif event_key == "espionage_breach":
         print("\n[Negative]: Espionage Data Breach!")
-        print("  [A] Upgrade firewall encryption (-$100 Capital)")
-        print("  [B] Risk market undercutting (-10% sales prices for the month)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Upgrade firewall encryption (-$100 Capital)")
+        print("  [2] Risk market undercutting (-10% sales prices for the month)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] -= 100
             print("\n-> Firewall upgraded: -$100 Capital.")
         else:
@@ -323,10 +332,10 @@ def handle_monthly_event(state):
 
     elif event_key == "tremor":
         print("\n[Negative]: Subterranean Tremor!")
-        print("  [A] Structural reinforcement engineering (-$120 Capital)")
-        print("  [B] Ignore it (Permanently increases negative event risk by +5%)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Structural reinforcement engineering (-$120 Capital)")
+        print("  [2] Ignore it (Permanently increases negative event risk by +5%)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] -= 120
             print("\n-> Reinforcements built: -$120 Capital.")
         else:
@@ -335,10 +344,10 @@ def handle_monthly_event(state):
 
     elif event_key == "pension_deficit":
         print("\n[Negative]: Union Pension Deficit Charge!")
-        print("  [A] Settle fully (-$140 Capital)")
-        print("  [B] Defer payments (Triggers a minor strike event next month)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Settle fully (-$140 Capital)")
+        print("  [2] Defer payments (Triggers a minor strike event next month)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] -= 140
             print("\n-> Pension settled: -$140 Capital.")
         else:
@@ -352,10 +361,10 @@ def handle_monthly_event(state):
 
     elif event_key == "customs_delay":
         print("\n[Negative]: Customs Impound Delays!")
-        print("  [A] Pay expedited clearance bribes (-$90 Capital)")
-        print("  [B] Wait out delay (Halts incoming raw material deliveries for cycle)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Pay expedited clearance bribes (-$90 Capital)")
+        print("  [2] Wait out delay (Halts incoming raw material deliveries for cycle)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] -= 90
             print("\n-> Bribes paid: -$90 Capital. Clearance expedited.")
         else:
@@ -364,10 +373,10 @@ def handle_monthly_event(state):
 
     elif event_key == "lawsuit":
         print("\n[Negative]: Workplace Injury Lawsuit!")
-        print("  [A] Settle out of court (-$130 Capital)")
-        print("  [B] Fight legally (-$60 legal fees, 40% chance of losing double)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Settle out of court (-$130 Capital)")
+        print("  [2] Fight legally (-$60 legal fees, 40% chance of losing double)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] -= 130
             print("\n-> Settled out of court: -$130 Capital.")
         else:
@@ -386,10 +395,10 @@ def handle_monthly_event(state):
 
     elif event_key == "lightning":
         print("\n[Negative]: Substation Lightning Strike!")
-        print("  [A] Replace hardware components (-$110 Capital)")
-        print("  [B] Rework old circuit boards (Skip minor action availability for 1 turn)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Replace hardware components (-$110 Capital)")
+        print("  [2] Rework old circuit boards (Skip minor action availability for 1 turn)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] -= 110
             print("\n-> Components replaced: -$110 Capital.")
         else:
@@ -402,10 +411,10 @@ def handle_monthly_event(state):
 
     elif event_key == "union_slowdown":
         print("\n[Negative]: Logistics Union Slowdown!")
-        print("  [A] Pay hazard bonuses to clear backlog (-$85 Capital)")
-        print("  [B] Suffer logistics delays (Max sell limit halved)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Pay hazard bonuses to clear backlog (-$85 Capital)")
+        print("  [2] Suffer logistics delays (Max sell limit halved)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] -= 85
             print("\n-> Hazard bonuses paid: -$85 Capital.")
         else:
@@ -414,10 +423,10 @@ def handle_monthly_event(state):
 
     elif event_key == "obsolescence":
         print("\n[Negative]: Obsolescence Crisis!")
-        print("  [A] Re-tool production lines (-$150 Capital)")
-        print("  [B] Sell at clearance discount (-20% revenue on sales)")
-        choice = input("Select choice (A/B): ").strip().upper()
-        if choice == "A":
+        print("  [1] Re-tool production lines (-$150 Capital)")
+        print("  [2] Sell at clearance discount (-20% revenue on sales)")
+        choice = get_binary_choice()
+        if choice == "1":
             state["capital"] -= 150
             print("\n-> Re-tooled lines: -$150 Capital.")
         else:
@@ -507,7 +516,6 @@ def run_game():
         )
         print("-" * 75)
 
-        # Menu Interface with Dynamic Availability Hiding
         print(" CHOOSE YOUR ACTIONS:")
         print("\n [MAJOR ACTIONS (Max 1 per month)]")
         if not major_exhausted:
