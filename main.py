@@ -65,7 +65,7 @@ def run_game():
 
     # Futures Contract Quota Tracking
     futures_contract_active = False
-    futures_quota_target = 40  # Balanced quota target for the month
+    futures_quota_target = 40
 
     skip_next_major = False
 
@@ -171,8 +171,7 @@ def run_game():
             print(" Status: ⚠️ Standard Market Risk Active")
 
         if futures_contract_active:
-            print(
-                f" Status Alert: 📈 Corporate Futures Contract Active (Quota: {futures_quota_target} goods | Bonus: 2.5x Price)")
+            print(f" Status Alert: 📈 Futures Contract Active (Quota: {futures_quota_target} goods | Bonus: 2.5x Price)")
 
         if skip_next_major:
             print(
@@ -190,25 +189,14 @@ def run_game():
         print(" CHOOSE YOUR ACTIONS:")
         print("\n [MAJOR ACTIONS (Max 1 per month)]")
         if not major_action_taken and not skip_next_major:
+            print("   [1] Prospect Unknown Sector (High risk / reward exploration pool)")
+            print(f"   [2] Construct Factory Expansion (Structural upgrade: -${expansion_cost} Cap)")
+            print("   [3] Invest in R&D (Research Logistics, Efficiency, Safety, Marketing)")
             print(
-                "   [1] Prospect Unknown Sector (Exploration: High risk / reward pool)"
-            )
-            print(
-                f"   [2] Construct Factory Expansion (Expansion: -${expansion_cost} Cap)"
-            )
-            print(
-                "   [3] Invest in R&D (Logistics, Efficiency, Safety, Marketing)"
-            )
-            print(
-                f"   [4] Corporate Futures Contract (Commit to selling {futures_quota_target}+ goods for massive profit)"
-            )
-            print(
-                "   [5] Bulk Material Import (Supply Chain: Emergency +150 Raw for $200)"
-            )
+                f"   [4] Corporate Futures Contract (Commit to selling {futures_quota_target}+ goods for massive profit)")
+            print("   [5] Bulk Material Import (Emergency supply chain safety net: +150 Raw for $200)")
         else:
-            print(
-                "   [1-5] (Major Action unavailable or completed this month)"
-            )
+            print("   [1-5] (Major Action unavailable or completed this month)")
 
         print("\n [MINOR ACTIONS (Limited per month)]")
         print("   [6] Secure Sales Contract & Sell Finished Goods on Market")
@@ -269,7 +257,8 @@ def run_game():
                 if event_roll == "high_yield":
                     raw_materials += 75
                     print(
-                        "\n [Success]: Located a rich rare mineral vein. (+75 Raw Materials)"
+                        "\n [Success]: Located a rich rare mineral vein."
+                        "\n Effect: +75 Raw Materials"
                     )
                 elif event_roll == "unstable":
                     print(
@@ -282,54 +271,65 @@ def run_game():
                         if random.random() < 0.5:
                             raw_materials += 125
                             print(
-                                "\n [Deep Dig Success]: Uncovered untouched mineral pockets! (+125 Raw Materials)"
+                                "\n [Deep Dig Success]: Uncovered untouched mineral pockets!"
+                                "\n Effect: +125 Raw Materials"
                             )
                         else:
                             capital -= 40
                             print(
-                                "\n [Cave-in Hazard]: Deep trench collapsed! Minor equipment damage cost -$40."
+                                "\n [Cave-in Hazard]: Deep trench collapsed!"
+                                "\n Effect: Minor equipment damage cost -$40."
                             )
                     else:
                         print(
-                            "\n [Safe Call]: Ceased operations safely. No resources gained or lost."
+                            "\n [Safe Call]: Ceased operations safely."
+                            "\n Effect: No resources gained or lost."
                         )
                 elif event_roll == "geode":
                     capital += 300
                     print(
-                        "\n [JACKPOT!]: Uncovered a magnificent geode of precious gemstones! (+300 Capital)"
+                        "\n [JACKPOT!]: Uncovered a magnificent geode of precious gemstones!"
+                        "\n Effect: +300 Capital"
                     )
                 elif event_roll == "shaft":
                     raw_materials += 90
                     print(
-                        "\n [Salvage]: Stumbled upon an abandoned colonial mining cache with sealed crates. (+90 Raw Materials)"
+                        "\n [Salvage]: Stumbled upon an abandoned colonial mining cache with sealed crates."
+                        "\n Effect: +90 Raw Materials"
                     )
                 elif event_roll == "barren":
                     print(
-                        "\n [Dead End]: The exploration team scans a sprawling sector of completely dead rock. Finds nothing of importance."
+                        "\n [Dead End]: The exploration team scans a sprawling sector of completely dead rock."
+                        "\n Effect: Finds nothing of importance."
                     )
                 elif event_roll == "cavern":
                     print(
-                        "\n [Hollow Earth]: The sector yields an empty network of hollow rock formations. Finds nothing of importance."
+                        "\n [Hollow Earth]: The sector yields an empty network of hollow rock formations."
+                        "\n Effect: Finds nothing of importance."
                     )
                 elif event_roll == "gas":
                     capital -= 30
                     print(
-                        "\n [Hazard]: Drilling punctured a minor pocket of foul, corrosive gas. Quick filter replacements cost -$30."
+                        "\n [Hazard]: Drilling punctured a minor pocket of foul, corrosive gas."
+                        "\n Effect: Quick filter replacements cost -$30."
                     )
                 elif event_roll == "seepage":
                     capital -= 40
                     print(
-                        "\n [Hazard]: Breaking through a wall caused minor water seepage into the trench. Pumping equipment cost -$40."
+                        "\n [Hazard]: Breaking through a wall caused minor water seepage into the trench."
+                        "\n Effect: Pumping equipment cost -$40."
                     )
                 elif event_roll == "slip":
                     capital -= 45
                     print(
-                        "\n [Hazard]: A minor rockshift settled the walls, misaligning drilling gear. Alignment touch-ups cost -$45."
+                        "\n [Hazard]: A minor rockshift settled the walls, misaligning drilling gear."
+                        "\n Effect: Alignment touch-ups cost -$45."
                     )
                 elif event_roll == "insects":
                     capital -= 35
                     print(
-                        "\n [Hazard]: Crews disturbed subterranean pests that chewed through wiring. Harness repairs cost -$35."
+                        "\n [Hazard]: Crews disturbed subterranean pests that chewed through wiring."
+                        "\n Effect: Harness repairs cost -$35."
                     )
 
             # --- 2. CONSTRUCT FACTORY EXPANSION ---
@@ -362,19 +362,25 @@ def run_game():
                         base_maintenance_cost += 15
                         negative_event_chance += 0.06
                         print(
-                            "\n[Ruthless Efficiency Applied]: Factory expanded! Maintenance increased by +$15/mo, negative event risk increased by +6%."
+                            "\n[Ruthless Efficiency Applied]: Factory expanded!"
+                            "\n - Maintenance increased by +$15/mo"
+                            "\n - Negative event risk increased by +6%"
                         )
                     elif strat_choice == "2":
                         base_maintenance_cost += 25
                         negative_event_chance = max(0.01, negative_event_chance - 0.12)
                         print(
-                            "\n[Safety Focus Applied]: Factory expanded! Maintenance increased by +$25/mo, safety improved significantly (-12% risk)."
+                            "\n[Safety Focus Applied]: Factory expanded!"
+                            "\n - Maintenance increased by +$25/mo"
+                            "\n - Safety improved significantly (-12% risk)"
                         )
                     elif strat_choice == "3":
                         base_maintenance_cost += 5
                         negative_event_chance += 0.15
                         print(
-                            "\n[Cost-Cutting Focus Applied]: Factory expanded! Maintenance increased by only +$5/mo, but negative event risk increased sharply (+15% risk)."
+                            "\n[Cost-Cutting Focus Applied]: Factory expanded!"
+                            "\n - Maintenance increased by only +$5/mo"
+                            "\n - Negative event risk increased sharply (+15% risk)"
                         )
                     else:
                         base_maintenance_cost += 20
@@ -391,16 +397,10 @@ def run_game():
             elif choice == "3":
                 print(f"--- MONTH {current_month}: RESEARCH & DEVELOPMENT ---")
                 print("Select a research field to invest in (-$100 Funds):")
-                print(
-                    f"  [1] Logistics [Tier: {research_levels['logistics']}/4]"
-                )
-                print(
-                    f"  [2] Efficiency [Tier: {research_levels['efficiency']}/4]"
-                )
+                print(f"  [1] Logistics [Tier: {research_levels['logistics']}/4]")
+                print(f"  [2] Efficiency [Tier: {research_levels['efficiency']}/4]")
                 print(f"  [3] Safety [Tier: {research_levels['safety']}/4]")
-                print(
-                    f"  [4] Marketing [Tier: {research_levels['marketing']}/4]"
-                )
+                print(f"  [4] Marketing [Tier: {research_levels['marketing']}/4]")
                 print("  [5] Cancel R&D Investment")
 
                 rd_choice = input("\nSelect field (1-5): ").strip()
@@ -416,7 +416,7 @@ def run_game():
 
                     if research_levels[selected_field] >= 4:
                         print(
-                            "\n[!] All technologies for this field are already fully researched! No more research can be done here."
+                            "\n[!] All technologies for this field are already fully researched!"
                         )
                         major_action_taken = False
                     elif capital >= 100:
@@ -444,84 +444,117 @@ def run_game():
                                         0, base_maintenance_cost - 5
                                     )
                                     print(
-                                        "\n[Tech 1/4 Unlocked] Advanced Logistics: Maintenance $5 cheaper."
+                                        "\n[Tech 1/4 Unlocked] Advanced Logistics:"
+                                        "\n - Maintenance $5 cheaper per month."
                                     )
                                 elif tier == 2:
                                     max_sell_limit += 20
                                     base_maintenance_cost += 10
                                     print(
-                                        "\n[Tech 2/4 Unlocked] Transport Planes: +20% profit, max sell limit +20, maintenance +$10."
+                                        "\n[Tech 2/4 Unlocked] Transport Planes:"
+                                        "\n - +20% profit bonus on sales"
+                                        "\n - Max sell limit +20"
+                                        "\n - Maintenance increased by +$10"
                                     )
                                 elif tier == 3:
                                     max_sell_limit += 50
                                     base_maintenance_cost += 5
                                     print(
-                                        "\n[Tech 3/4 Unlocked] Sea Freight: +10% profit, max sell limit +50, maintenance +$5."
+                                        "\n[Tech 3/4 Unlocked] Sea Freight Shipping:"
+                                        "\n - +10% profit bonus on sales"
+                                        "\n - Max sell limit +50"
+                                        "\n - Maintenance increased by +$5"
                                     )
                                 elif tier == 4:
                                     base_maintenance_cost = max(
                                         0, base_maintenance_cost - 15
                                     )
                                     print(
-                                        "\n[Tech 4/4 Unlocked] Improved Warehouses: Maintenance reduced by $15."
+                                        "\n[Tech 4/4 Unlocked] Improved Warehouses:"
+                                        "\n - Maintenance reduced by $15."
                                     )
                             elif selected_field == "efficiency":
                                 if tier == 1:
                                     base_maintenance_cost += 5
                                     print(
-                                        "\n[Tech 1/4 Unlocked] Improved Tools: +5 finished goods/mo, maintenance +$5."
+                                        "\n[Tech 1/4 Unlocked] Improved Tools:"
+                                        "\n - +5 finished goods produced/mo"
+                                        "\n - Maintenance increased by +$5"
                                     )
                                 elif tier == 2:
                                     base_maintenance_cost -= 5
                                     expansion_cost += 20
                                     print(
-                                        "\n[Tech 2/4 Unlocked] High Quality Equipment: +10 goods/mo, maintenance -$5, expansion +$20."
+                                        "\n[Tech 2/4 Unlocked] High Quality Equipment:"
+                                        "\n - +10 finished goods produced/mo"
+                                        "\n - Maintenance reduced by -$5"
+                                        "\n - Factory expansions cost +$20 more"
                                     )
                                 elif tier == 3:
                                     print(
-                                        "\n[Tech 3/4 Unlocked] Automated Equipment: Raw +20, finished +5."
+                                        "\n[Tech 3/4 Unlocked] Automated Equipment:"
+                                        "\n - Raw material output +20/mo"
+                                        "\n - Finished goods output +5/mo"
                                     )
                                 elif tier == 4:
                                     print(
-                                        "\n[Tech 4/4 Unlocked] Deep Drilling: Raw +35 (Unlocks 'cave in' risk)."
+                                        "\n[Tech 4/4 Unlocked] Deep Drilling Permits:"
+                                        "\n - Raw material output +35/mo"
+                                        "\n - Unlocks rare 'cave in' hazard risk."
                                     )
                             elif selected_field == "safety":
                                 if tier == 1:
                                     base_maintenance_cost += 3
                                     print(
-                                        "\n[Tech 1/4 Unlocked] Basic Hazard Protocols: Exploration hazard risk reduced, upkeep +$3."
+                                        "\n[Tech 1/4 Unlocked] Basic Hazard Protocols:"
+                                        "\n - Exploration hazard risk reduced"
+                                        "\n - Maintenance increased by +$3"
                                     )
                                 elif tier == 2:
                                     base_maintenance_cost += 4
                                     print(
-                                        "\n[Tech 2/4 Unlocked] Reinforced Flooring: Hazard risk further reduced, upkeep +$4."
+                                        "\n[Tech 2/4 Unlocked] Reinforced Flooring & Shielding:"
+                                        "\n - Hazard risk further reduced"
+                                        "\n - Maintenance increased by +$4"
                                     )
                                 elif tier == 3:
                                     base_maintenance_cost += 5
                                     print(
-                                        "\n[Tech 3/4 Unlocked] Autonomous Fire Suppression: Hazard risk significantly lowered, upkeep +$5."
+                                        "\n[Tech 3/4 Unlocked] Autonomous Fire Suppression:"
+                                        "\n - Hazard risk significantly lowered"
+                                        "\n - Maintenance increased by +$5"
                                     )
                                 elif tier == 4:
                                     base_maintenance_cost += 6
                                     print(
-                                        "\n[Tech 4/4 Unlocked] Zero-Incident AI Grid: Near total accident suppression, upkeep +$6."
+                                        "\n[Tech 4/4 Unlocked] Zero-Incident AI Grid:"
+                                        "\n - Near total accident suppression"
+                                        "\n - Maintenance increased by +$6"
                                     )
                             elif selected_field == "marketing":
                                 if tier == 1:
                                     print(
-                                        "\n[Tech 1/4 Unlocked] Regional Advertising: Quota 50 goods (+5% bonus)."
+                                        "\n[Tech 1/4 Unlocked] Regional Advertising:"
+                                        "\n - Monthly Sales Quota: 50 goods"
+                                        "\n - Reward: +5% profit bonus when met."
                                     )
                                 elif tier == 2:
                                     print(
-                                        "\n[Tech 2/4 Unlocked] National Distribution: Quota 70 goods (+10% bonus)."
+                                        "\n[Tech 2/4 Unlocked] National Distribution:"
+                                        "\n - Monthly Sales Quota: 70 goods"
+                                        "\n - Reward: +10% profit bonus when met."
                                     )
                                 elif tier == 3:
                                     print(
-                                        "\n[Tech 3/4 Unlocked] Continental Brand: Quota 90 goods (+15% bonus)."
+                                        "\n[Tech 3/4 Unlocked] Continental Brand Dominance:"
+                                        "\n - Monthly Sales Quota: 90 goods"
+                                        "\n - Reward: +15% profit bonus when met."
                                     )
                                 elif tier == 4:
                                     print(
-                                        "\n[Tech 4/4 Unlocked] Global Monopoly Campaign: Quota 120 goods (+25% bonus)."
+                                        "\n[Tech 4/4 Unlocked] Global Monopoly Campaign:"
+                                        "\n - Monthly Sales Quota: 120 goods"
+                                        "\n - Reward: +25% profit bonus when met."
                                     )
                     else:
                         print(
@@ -534,15 +567,12 @@ def run_game():
 
             # --- 4. CORPORATE FUTURES CONTRACT ---
             elif choice == "4":
-                print(
-                    f"--- MONTH {current_month}: CORPORATE FUTURES CONTRACT ---"
-                )
+                print(f"--- MONTH {current_month}: CORPORATE FUTURES CONTRACT ---")
                 futures_contract_active = True
-                print(
-                    f"\n Secured futures contract! Target quota for this month is {futures_quota_target} goods."
-                    f" If you sell {futures_quota_target}+ goods this month, you will receive a massive 2.5x profit multiplier."
-                    f" If you fail to meet the quota by month end, you will incur a -10% capital penalty."
-                )
+                print("\nSecured corporate futures contract!")
+                print(f" - Monthly Quota Target: {futures_quota_target} goods")
+                print(" - Success Reward: Massive 2.5x price multiplier on sales.")
+                print(" - Failure Penalty: -10% capital penalty if quota is missed.")
 
             # --- 5. BULK MATERIAL IMPORT ---
             elif choice == "5":
@@ -551,7 +581,9 @@ def run_game():
                     capital -= 200
                     raw_materials += 150
                     print(
-                        "\n Emergency bulk import successful! Purchased +150 Raw Materials for $200."
+                        "\nEmergency bulk import successful!"
+                        "\n - Cost: $200 Capital"
+                        "\n - Acquired: +150 Raw Materials"
                     )
                 else:
                     print(
@@ -581,7 +613,6 @@ def run_game():
             if finished_goods > 0:
                 sold_amount = min(finished_goods, max_sell_limit)
 
-                # Apply 2.5x futures multiplier if contract is active
                 if futures_contract_active:
                     current_unit_price *= 2.5
                     print(" [Futures Contract Active]: Applying 2.5x price multiplier bonus!")
@@ -627,17 +658,19 @@ def run_game():
             clear_screen()
             print(f"=== END OF MONTH {current_month} SUMMARY ===")
 
-            # --- EVALUATE CORPORATE FUTURES QUOTA ---
+            # Evaluate Corporate Futures Quota
             if futures_contract_active:
                 if total_goods_sold_this_month >= futures_quota_target:
                     print(
-                        f" [Futures Contract Met]: Sold {total_goods_sold_this_month} / {futures_quota_target} required goods. Contract fulfilled successfully with massive bonuses!"
+                        f" [Futures Contract Met]: Sold {total_goods_sold_this_month} / {futures_quota_target} goods."
+                        "\n Contract fulfilled successfully with massive bonuses!"
                     )
                 else:
                     penalty_amount = capital * 0.10
                     capital -= penalty_amount
                     print(
-                        f" [Futures Contract Failed]: Sold only {total_goods_sold_this_month} / {futures_quota_target} required goods. Penalty incurred: -10% capital (-${penalty_amount:.2f})."
+                        f" [Futures Contract Failed]: Sold only {total_goods_sold_this_month} / {futures_quota_target} goods."
+                        f"\n Penalty incurred: -10% capital (-${penalty_amount:.2f})."
                     )
                 futures_contract_active = False
 
@@ -655,7 +688,8 @@ def run_game():
                     bonus_cash = capital * q_bonus
                     capital += bonus_cash
                     print(
-                        f" [Marketing Quota Met]: Sold {total_goods_sold_this_month} / {q_target}! Awarded +{int(q_bonus * 100)}% profit bonus (${bonus_cash:.2f})."
+                        f" [Marketing Quota Met]: Sold {total_goods_sold_this_month} / {q_target}!"
+                        f"\n Awarded +{int(q_bonus * 100)}% profit bonus (${bonus_cash:.2f})."
                     )
                 else:
                     print(
@@ -688,7 +722,8 @@ def run_game():
                 capital -= 90
                 total_mined = 0
                 print(
-                    " [CAVE IN HAZARD!]: Deep drilling disaster! -$90 incurred and all raw material this month is lost."
+                    " [CAVE IN HAZARD!]: Deep drilling disaster!"
+                    "\n -$90 incurred and all raw material this month is lost."
                 )
 
             if not cave_in_occurred:
