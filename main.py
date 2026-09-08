@@ -1,6 +1,6 @@
 import os
 import random
-from factory_core import (
+from factory_logic import (
     create_initial_game_state,
     is_bankrupt,
     has_achieved_monopoly,
