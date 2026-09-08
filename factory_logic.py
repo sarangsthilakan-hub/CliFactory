@@ -26,9 +26,10 @@ def create_initial_game_state(difficulty_name, starting_capital, guaranteed_mont
         "expansion_cost": 300,
         "max_sell_limit": 50,
 
-        # Contracts & Modifiers
+        # Contracts, Modifiers & Cooldowns
         "futures_contract_active": False,
         "futures_quota_target": 40,
+        "futures_cooldown_remaining": 0,
         "market_price_multiplier": 20.0,
 
         # Turn Constraints & Special Flags
@@ -131,7 +132,6 @@ def execute_sales_contract(game_state, quantity_to_sell):
 
     if state["futures_contract_active"]:
         unit_price *= 2.5
-        state["futures_contract_active"] = False
 
     sold_amount = min(quantity_to_sell, state["max_sell_limit"], state["finished_goods"])
     earned_revenue = sold_amount * unit_price
@@ -145,15 +145,29 @@ def execute_sales_contract(game_state, quantity_to_sell):
 
 def process_end_of_month_rollover(game_state, cave_in_occurred):
     state = game_state.copy()
+    action_logs = []
 
-    # Futures Contract Quota Check
+    # 1. Decrement Futures Cooldown Timer
+    if state["futures_cooldown_remaining"] > 0:
+        state["futures_cooldown_remaining"] -= 1
+
+    # 2. Evaluate Futures Contract Quota
     if state["futures_contract_active"]:
-        if state["total_goods_sold_this_month"] < state["futures_quota_target"]:
+        if state["total_goods_sold_this_month"] >= state["futures_quota_target"]:
+            action_logs.append(
+                f" [Futures Contract Met]: Sold {state['total_goods_sold_this_month']} / "
+                f"{state['futures_quota_target']} goods. Quota fulfilled successfully!"
+            )
+        else:
             penalty = state["capital"] * 0.10
             state["capital"] -= penalty
+            action_logs.append(
+                f" [Futures Contract Failed]: Sold only {state['total_goods_sold_this_month']} / "
+                f"{state['futures_quota_target']} goods. Incurred 10% capital penalty (-${penalty:.2f})."
+            )
         state["futures_contract_active"] = False
 
-    # Marketing Quota Check
+    # 3. Evaluate Marketing Quotas
     marketing_tier = state["research_levels"]["marketing"]
     quota_targets = {1: 50, 2: 70, 3: 90, 4: 120}
     quota_bonuses = {1: 0.05, 2: 0.10, 3: 0.15, 4: 0.25}
@@ -163,8 +177,16 @@ def process_end_of_month_rollover(game_state, cave_in_occurred):
         if state["total_goods_sold_this_month"] >= target_qty:
             bonus_cash = state["capital"] * quota_bonuses[marketing_tier]
             state["capital"] += bonus_cash
+            action_logs.append(
+                f" [Marketing Quota Met]: Sold {state['total_goods_sold_this_month']} / {target_qty} goods! "
+                f"Awarded +{int(quota_bonuses[marketing_tier] * 100)}% profit bonus (${bonus_cash:.2f})."
+            )
+        else:
+            action_logs.append(
+                f" [Marketing Quota Missed]: Sold {state['total_goods_sold_this_month']} / {target_qty} required goods."
+            )
 
-    # Passive Mining & Refining
+    # 4. Passive Mining & Refining
     eff_tier = state["research_levels"]["efficiency"]
     mining_bonus = 0
     refining_bonus = 0
@@ -180,8 +202,10 @@ def process_end_of_month_rollover(game_state, cave_in_occurred):
     if cave_in_occurred:
         state["capital"] -= 90
         total_mined = 0
+        action_logs.append(" [CAVE IN HAZARD!]: Deep drilling disaster! -$90 incurred and monthly raw materials lost.")
     else:
         state["raw_materials"] += total_mined
+        action_logs.append(f" Autonomous extraction mined +{total_mined} raw materials.")
 
     total_refining_capacity = 18 + (state["factory_expansion_tier"] * 15) + refining_bonus
     if eff_tier >= 1:
@@ -192,11 +216,13 @@ def process_end_of_month_rollover(game_state, cave_in_occurred):
     actual_refined = min(state["raw_materials"], total_refining_capacity)
     state["raw_materials"] -= actual_refined
     state["finished_goods"] += actual_refined
+    action_logs.append(f" Factory converted {actual_refined} raw materials into finished sellable goods.")
 
-    # Maintenance Upkeep
+    # 5. Maintenance Upkeep
     state["capital"] -= state["base_maintenance_cost"]
+    action_logs.append(f" Deducted ${state['base_maintenance_cost']} monthly infrastructure maintenance cost.")
 
-    # Rollover resets
+    # 6. Rollover resets
     if state["operations_locked_turns"] > 0:
         state["operations_locked_turns"] -= 1
 
@@ -207,4 +233,4 @@ def process_end_of_month_rollover(game_state, cave_in_occurred):
     state["total_goods_sold_this_month"] = 0
     state["next_major_yield_bonus"] = 0.0
 
-    return state
+    return state, action_logs

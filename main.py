@@ -106,7 +106,8 @@ def run_game():
             print(" Status: ⚠️ Standard Market Risk Active")
 
         if state["futures_contract_active"]:
-            print(f" Status Alert: 📈 Futures Contract Active (Quota: {state['futures_quota_target']} goods)")
+            print(
+                f" Status Alert: 📈 Futures Contract Active (Quota: {state['futures_quota_target']} goods | Bonus: 2.5x Price)")
 
         if state["skip_next_major"]:
             print(" Status Alert: 🔴 Major Action locked due to prior failure!")
@@ -124,7 +125,14 @@ def run_game():
             print("   [1] Prospect Unknown Sector (High risk / reward exploration pool)")
             print(f"   [2] Construct Factory Expansion (Structural upgrade: -${state['expansion_cost']} Cap)")
             print("   [3] Invest in R&D (Research Logistics, Efficiency, Safety, Marketing)")
-            print(f"   [4] Corporate Futures Contract (Commit to selling {state['futures_quota_target']}+ goods)")
+
+            # Dynamic display based on cooldown status
+            if state["futures_cooldown_remaining"] > 0:
+                print(
+                    f"   [4] Corporate Futures Contract [ON COOLDOWN: {state['futures_cooldown_remaining']} mos remaining]")
+            else:
+                print(f"   [4] Corporate Futures Contract (Commit to selling {state['futures_quota_target']}+ goods)")
+
             print("   [5] Bulk Material Import (Emergency supply chain safety net: +150 Raw for $200)")
         else:
             print("   [1-5] (Major Action unavailable or completed this month)")
@@ -247,11 +255,17 @@ def run_game():
                         print("\n[!] Insufficient Capital! R&D requires $100.")
 
             elif choice == "4":
-                state["major_action_taken"] = True
-                state["futures_contract_active"] = True
                 print(f"--- MONTH {state['current_month']}: CORPORATE FUTURES CONTRACT ---")
-                print(
-                    f"\nSecured futures contract! Target quota: {state['futures_quota_target']} goods for 2.5x price bonus.")
+                if state["futures_cooldown_remaining"] > 0:
+                    print(
+                        f"\n[!] Futures contract is on cooldown! ({state['futures_cooldown_remaining']} months remaining).")
+                    state["major_action_taken"] = False  # Refund action
+                else:
+                    state["major_action_taken"] = True
+                    state["futures_contract_active"] = True
+                    state["futures_cooldown_remaining"] = 3
+                    print(
+                        f"\nSecured futures contract! Target quota: {state['futures_quota_target']} goods for 2.5x price bonus.")
 
             elif choice == "5":
                 print(f"--- MONTH {state['current_month']}: BULK MATERIAL IMPORT ---")
@@ -265,7 +279,7 @@ def run_game():
 
             input("\nPress Enter to return to the dashboard...")
 
-        # Handle Minor Actions Sub-Menu [6] (Fully Restored)
+        # Handle Minor Actions Sub-Menu [6]
         elif choice == "6":
             if state["minor_actions_used"] >= state["max_minor_actions"]:
                 clear_screen()
@@ -585,12 +599,12 @@ def run_game():
             print(f"=== END OF MONTH {state['current_month']} SUMMARY ===")
 
             cave_in = state["research_levels"]["efficiency"] >= 4 and random.random() < state["negative_event_chance"]
-            state = process_end_of_month_rollover(state, cave_in)
+            state, action_logs = process_end_of_month_rollover(state, cave_in)
 
-            if cave_in:
-                print(" [CAVE IN HAZARD!]: Deep drilling disaster! -$90 incurred and monthly raw materials lost.")
+            for log in action_logs:
+                print(log)
 
-            print("\n Advancing time cycle...\n")
+            print(f"\n Advancing time cycle to Month {state['current_month']}...\n")
             input("\nPress Enter to begin the new month...")
 
         elif choice == "9":
