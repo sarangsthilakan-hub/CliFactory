@@ -8,6 +8,7 @@ from factory_logic import (
     execute_factory_expansion,
     execute_rd_investment,
     execute_sales_contract,
+    roll_monthly_event,
     process_end_of_month_rollover,
 )
 
@@ -23,14 +24,11 @@ def select_difficulty():
         print("          🏭 CLIFACTORY: SELECT CORPORATE TIER 🏭          ")
         print("=" * 75)
         print("   [1] SUBSIDIZED STARTUP (Easy)")
-        print("       - Starting Capital: $800.00")
-        print("       - Guaranteed Positive Outcomes: First 4 Months")
+        print("       - Starting Capital: $800.00 | Goal: $5,000 & 50 goods/mo")
         print("\n   [2] MID-MARKET (Normal)")
-        print("       - Starting Capital: $500.00")
-        print("       - Guaranteed Positive Outcomes: First 2 Months")
+        print("       - Starting Capital: $500.00 | Goal: $15,000, 120 goods/mo & 2 Max Techs")
         print("\n   [3] HOSTILE TAKEOVER (Hard)")
-        print("       - Starting Capital: $250.00")
-        print("       - Guaranteed Positive Outcomes: None (Pure RNG)")
+        print("       - Starting Capital: $250.00 | Goal: $35,000, 250 goods/mo, All Techs & 3 Futures")
         print("-" * 75)
 
         choice = input("Select tier (1-3): ").strip()
@@ -43,6 +41,391 @@ def select_difficulty():
             return "Hostile Takeover", 250.0, 0
         else:
             input("\n[!] Invalid choice. Press Enter to try again.")
+
+
+def handle_monthly_event(state):
+    """Processes the expanded 40-event pool with choice-driven mitigation options."""
+    is_positive, event_key = roll_monthly_event(state)
+    if not event_key:
+        return state
+
+    clear_screen()
+    print("=" * 75)
+    print(f"       🚨 MONTHLY EVENT: {event_key.upper().replace('_', ' ')} 🚨       ")
+    print("=" * 75)
+
+    # --- POSITIVE EVENTS HANDLING ---
+    if event_key == "high_demand":
+        state["temporary_price_bonus"] = 1.5
+        print("\n[Positive]: High Market Demand! Next sales contract receives a +50% price bonus.")
+
+    elif event_key == "subsidy":
+        print("\n[Positive]: Government Clean Energy Subsidy!")
+        print("  [A] Accept clean-up infrastructure grant (+$60 Capital & permanent risk reduction)")
+        print("  [B] Take immediate cash payout (+$150 Capital)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] += 60
+            state["negative_event_chance"] = max(0.01, state["negative_event_chance"] - 0.05)
+            print("\n-> Accepted grant: +$60 Capital, risk exposure reduced.")
+        else:
+            state["capital"] += 150
+            print("\n-> Took cash payout: +$150 Capital.")
+
+    elif event_key == "investor":
+        print("\n[Positive]: External Investor Interest!")
+        print("  [A] Issue shares for funding (+$250 Capital)")
+        print("  [B] Decline and protect equity")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] += 250
+            print("\n-> Issued shares: +$250 Capital.")
+        else:
+            print("\n-> Declined investor backing.")
+
+    elif event_key == "surplus":
+        print("\n[Positive]: Warehouse Liquidation Sale!")
+        print("  [A] Purchase surplus stock (+60 Raw Materials for $30)")
+        print("  [B] Pass on the offer")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A" and state["capital"] >= 30:
+            state["capital"] -= 30
+            state["raw_materials"] += 60
+            print("\n-> Purchased surplus: +60 Raw Materials for -$30.")
+        else:
+            print("\n-> Passed on liquidation deal.")
+
+    elif event_key == "innovation":
+        print("\n[Positive]: Star Employee Innovation!")
+        print("  [A] File a commercial patent (+$100 Capital)")
+        print("  [B] Distribute team bonuses (+10% yield on next Major Action)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] += 100
+            print("\n-> Filed patent: +$100 Capital.")
+        else:
+            state["next_major_yield_bonus"] += 0.10
+            print("\n-> Distributed bonuses: Next Major Action boosted by +10%.")
+
+    elif event_key == "logistics_breakthrough":
+        state["base_maintenance_cost"] = max(0, state["base_maintenance_cost"] // 2)
+        print("\n[Positive]: Logistics Industry Breakthrough! Upkeep maintenance halved for this month.")
+
+    elif event_key == "scrap_boom":
+        print("\n[Positive]: Scrap Metal Market Boom!")
+        print("  [A] Sell factory scrap reserves (+$120 Capital)")
+        print("  [B] Melt scrap down into raw material (+40 Raw Materials)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] += 120
+            print("\n-> Sold scrap: +$120 Capital.")
+        else:
+            state["raw_materials"] += 40
+            print("\n-> Melted scrap: +40 Raw Materials.")
+
+    elif event_key == "espionage_windfall":
+        print("\n[Positive]: Corporate Espionage Windfall! Acquired open intel.")
+        state["capital"] += 80
+        print("-> Secured trade secrets: +$80 Capital.")
+
+    elif event_key == "angel_investor":
+        print("\n[Positive]: Angel Investor Syndicate!")
+        print("  [A] Accept equity loan (+$300 Capital, +$15 monthly interest)")
+        print("  [B] Take outright grant (+$120 Capital)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] += 300
+            state["base_maintenance_cost"] += 15
+            print("\n-> Loan accepted: +$300 Capital, +$15 monthly upkeep increase.")
+        else:
+            state["capital"] += 120
+            print("\n-> Grant accepted: +$120 Capital.")
+
+    elif event_key == "award":
+        state["capital"] += 200
+        state["market_price_multiplier"] += 2.0
+        print("\n[Positive]: State Industrial Excellence Award! +$200 Capital and brand value increased.")
+
+    elif event_key == "supply_surplus":
+        state["raw_materials"] += 50
+        print("\n[Positive]: Bulk Supply Surplus Delivery! Received +50 Raw Materials free.")
+
+    elif event_key == "merger":
+        print("\n[Positive]: Friendly Corporate Merger Offer!")
+        print("  [A] Absorb assets (+30 Finished Goods, -$80 fee)")
+        print("  [B] Decline")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A" and state["capital"] >= 80:
+            state["capital"] -= 80
+            state["finished_goods"] += 30
+            print("\n-> Merged assets: +30 Finished Goods for -$80.")
+        else:
+            print("\n-> Decline merger offer.")
+
+    elif event_key == "tech_leak":
+        state["capital"] += 90
+        print("\n[Positive]: Technological Breakthrough Leak! R&D efficiency insights grant +$90 Capital.")
+
+    elif event_key == "drone_gift":
+        state["max_sell_limit"] += 15
+        print("\n[Positive]: Autonomous Drone Delivery Gift! Max sell limit permanently increased by +15.")
+
+    elif event_key == "grid_rebate":
+        state["capital"] += 90
+        print("\n[Positive]: Energy Grid Rebate! Municipal utility rewards efficiency with +$90 Capital.")
+
+    elif event_key == "patent_buyout":
+        print("\n[Positive]: Secret Patent Buyout!")
+        print("  [A] Sell blueprint outright (+$180 Capital)")
+        print("  [B] Retain rights (+15 Capital every month)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] += 180
+            print("\n-> Sold patent outright: +$180 Capital.")
+        else:
+            state["base_maintenance_cost"] = max(0, state["base_maintenance_cost"] - 15)
+            print("\n-> Retained rights: Monthly maintenance permanently reduced by -$15.")
+
+    elif event_key == "skilled_labor":
+        print("\n[Positive]: Skilled Labor Influx!")
+        print("  [A] Hire expert engineers (+10 refining capacity, +$15 wage upkeep)")
+        print("  [B] Pass")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["base_maintenance_cost"] += 15
+            print("\n-> Hired engineers: Upkeep increased by +$15, refining output boosted.")
+        else:
+            print("\n-> Passed on hiring.")
+
+    elif event_key == "luxury_contract":
+        state["temporary_price_bonus"] = 2.0
+        print("\n[Positive]: Luxury Commercial Contract! Next sales contract receives a double-value multiplier.")
+
+    elif event_key == "tax_loophole":
+        state["capital"] += 100
+        print("\n[Positive]: Tax Loophole Discovery! Accountants refund +$100 Capital.")
+
+    elif event_key == "trade_treaty":
+        print("\n[Positive]: Global Trade Treaty Realignment! Bulk Material Imports permanently discounted by $50.")
+
+    # --- NEGATIVE EVENTS HANDLING ---
+    elif event_key == "strike":
+        print("\n[Negative]: Worker Strikes!")
+        print("  [A] Negotiate living wages (+10 permanent monthly maintenance)")
+        print("  [B] Fire striking workers (Reduce refining capacity by -5 for the month)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["base_maintenance_cost"] += 10
+            print("\n-> Negotiated wages: Maintenance increased by +$10/mo.")
+        else:
+            state["temporary_refining_modifier"] -= 5
+            print("\n-> Fired workers: Refining capacity reduced by -5 for this month.")
+
+    elif event_key == "audit":
+        print("\n[Negative]: Regulatory Safety Audit!")
+        print("  [A] Pay immediate compliance fine (-$80 Capital)")
+        print("  [B] Contest in court (50% chance to pay $0, 50% chance to pay -$160)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] -= 80
+            print("\n-> Paid fine: -$80 Capital.")
+        else:
+            if random.random() < 0.50:
+                print("\n-> Court ruling successful! Infractions dismissed with $0 penalty.")
+            else:
+                state["capital"] -= 160
+                print("\n-> Court ruling failed! Heavy penalty incurred: -$160 Capital.")
+
+    elif event_key == "brownout":
+        state["temporary_refining_modifier"] -= 8
+        print("\n[Negative]: Power Grid Brownout! Refining output throttled for the month.")
+
+    elif event_key == "contamination":
+        spoiled = min(state["raw_materials"], 35)
+        state["raw_materials"] -= spoiled
+        print(f"\n[Negative]: Warehouse Contamination! Spoilage destroyed {spoiled} Raw Materials.")
+
+    elif event_key == "circuit":
+        print("\n[Negative]: Machinery Short-Circuit!")
+        print("  [A] Professional emergency repairs (-$70 Capital)")
+        print("  [B] Makeshift wiring (+$20 permanent maintenance friction drag)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] -= 70
+            print("\n-> Professional repairs paid: -$70 Capital.")
+        else:
+            state["base_maintenance_cost"] += 20
+            print("\n-> Makeshift patch applied: Maintenance increased by +$20/mo.")
+
+    elif event_key == "piracy":
+        print("\n[Negative]: Supply Chain Piracy / Hijacking!")
+        print("  [A] Hire private security escort (-$50 Capital, blocks future transit thefts)")
+        print("  [B] Write off the loss (-40 Raw Materials)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] -= 50
+            print("\n-> Hired security: -$50 Capital. Convoy secured.")
+        else:
+            state["raw_materials"] = max(0, state["raw_materials"] - 40)
+            print("\n-> Wrote off loss: Lost 40 Raw Materials.")
+
+    elif event_key == "chemical_leak":
+        print("\n[Negative]: Corrosive Chemical Leak!")
+        print("  [A] Hazmat cleanup crew (-$90 Capital)")
+        print("  [B] Internal cleanup (-15 Finished Goods inventory spoiled)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] -= 90
+            print("\n-> Hazmat crew paid: -$90 Capital.")
+        else:
+            state["finished_goods"] = max(0, state["finished_goods"] - 15)
+            print("\n-> Internal cleanup: Lost 15 Finished Goods.")
+
+    elif event_key == "tax_hike":
+        print("\n[Negative]: Municipal Property Tax Hike!")
+        print("  [A] Pay increased tax (+$15 permanent monthly maintenance)")
+        print("  [B] File legal appeals (-$50 legal fee, 50% chance to block hike)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["base_maintenance_cost"] += 15
+            print("\n-> Paid tax hike: Maintenance increased by +$15/mo.")
+        else:
+            state["capital"] -= 50
+            if random.random() < 0.50:
+                print("\n-> Legal appeal successful! Tax hike blocked.")
+            else:
+                state["base_maintenance_cost"] += 15
+                print("\n-> Appeal failed. Paid $50 fee and tax hike applied anyway.")
+
+    elif event_key == "subcontractor_drop":
+        print("\n[Negative]: Subcontractor Bankruptcy!")
+        print("  [A] Emergency contract buyout (-$110 Capital)")
+        print("  [B] Suffer shipping bottlenecks (-20 max sell limit for month)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] -= 110
+            print("\n-> Buyout paid: -$110 Capital.")
+        else:
+            state["max_sell_limit"] = max(10, state["max_sell_limit"] - 20)
+            print("\n-> Bottleneck accepted: Max sell limit reduced for the month.")
+
+    elif event_key == "espionage_breach":
+        print("\n[Negative]: Espionage Data Breach!")
+        print("  [A] Upgrade firewall encryption (-$100 Capital)")
+        print("  [B] Risk market undercutting (-10% sales prices for the month)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] -= 100
+            print("\n-> Firewall upgraded: -$100 Capital.")
+        else:
+            state["temporary_price_bonus"] *= 0.90
+            print("\n-> Undercutting accepted: Sales prices reduced by 10% for the month.")
+
+    elif event_key == "tremor":
+        print("\n[Negative]: Subterranean Tremor!")
+        print("  [A] Structural reinforcement engineering (-$120 Capital)")
+        print("  [B] Ignore it (Permanently increases negative event risk by +5%)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] -= 120
+            print("\n-> Reinforcements built: -$120 Capital.")
+        else:
+            state["negative_event_chance"] += 0.05
+            print("\n-> Ignored: Permanent hazard risk increased by +5%.")
+
+    elif event_key == "pension_deficit":
+        print("\n[Negative]: Union Pension Deficit Charge!")
+        print("  [A] Settle fully (-$140 Capital)")
+        print("  [B] Defer payments (Triggers a minor strike event next month)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] -= 140
+            print("\n-> Pension settled: -$140 Capital.")
+        else:
+            state["temporary_refining_modifier"] -= 3
+            print("\n-> Deferred: Workers staging slowdowns.")
+
+    elif event_key == "counterfeit_ore":
+        spoiled_raw = min(state["raw_materials"], 20)
+        state["raw_materials"] -= spoiled_raw
+        print(f"\n[Negative]: Counterfeit Raw Material Batch! Discovered bad ore, losing {spoiled_raw} Raw Materials.")
+
+    elif event_key == "customs_delay":
+        print("\n[Negative]: Customs Impound Delays!")
+        print("  [A] Pay expedited clearance bribes (-$90 Capital)")
+        print("  [B] Wait out delay (Halts incoming raw material deliveries for cycle)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] -= 90
+            print("\n-> Bribes paid: -$90 Capital. Clearance expedited.")
+        else:
+            print("\n-> Waited out delay: No raw materials will be mined/extracted next cycle.")
+            state["temporary_refining_modifier"] -= 15
+
+    elif event_key == "lawsuit":
+        print("\n[Negative]: Workplace Injury Lawsuit!")
+        print("  [A] Settle out of court (-$130 Capital)")
+        print("  [B] Fight legally (-$60 legal fees, 40% chance of losing double)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] -= 130
+            print("\n-> Settled out of court: -$130 Capital.")
+        else:
+            state["capital"] -= 60
+            if random.random() < 0.40:
+                state["capital"] -= 200
+                print("\n-> Lost court battle! Paid -$260 total.")
+            else:
+                print("\n-> Won court battle! Saved from massive liability.")
+
+    elif event_key == "inflation":
+        inflation_hit = state["capital"] * 0.05
+        state["capital"] -= inflation_hit
+        print(
+            f"\n[Negative]: Currency Inflation Spike! National fiat devalues. Lost -${inflation_hit:.2f} to inflation.")
+
+    elif event_key == "lightning":
+        print("\n[Negative]: Substation Lightning Strike!")
+        print("  [A] Replace hardware components (-$110 Capital)")
+        print("  [B] Rework old circuit boards (Skip minor action availability for 1 turn)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] -= 110
+            print("\n-> Components replaced: -$110 Capital.")
+        else:
+            state["max_minor_actions"] = max(0, state["max_minor_actions"] - 1)
+            print("\n-> Reworked manually: Minor actions restricted for the month.")
+
+    elif event_key == "price_war":
+        state["temporary_price_bonus"] *= 0.80
+        print("\n[Negative]: Rival Corporate Price War! Competitors flood market. Sales prices reduced by 20%.")
+
+    elif event_key == "union_slowdown":
+        print("\n[Negative]: Logistics Union Slowdown!")
+        print("  [A] Pay hazard bonuses to clear backlog (-$85 Capital)")
+        print("  [B] Suffer logistics delays (Max sell limit halved)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] -= 85
+            print("\n-> Hazard bonuses paid: -$85 Capital.")
+        else:
+            state["max_sell_limit"] = state["max_sell_limit"] // 2
+            print("\n-> Slowdown accepted: Max sell limit halved for the month.")
+
+    elif event_key == "obsolescence":
+        print("\n[Negative]: Obsolescence Crisis!")
+        print("  [A] Re-tool production lines (-$150 Capital)")
+        print("  [B] Sell at clearance discount (-20% revenue on sales)")
+        choice = input("Select choice (A/B): ").strip().upper()
+        if choice == "A":
+            state["capital"] -= 150
+            print("\n-> Re-tooled lines: -$150 Capital.")
+        else:
+            state["temporary_price_bonus"] *= 0.80
+            print("\n-> Clearance discount accepted: -20% revenue penalty.")
+
+    input("\nPress Enter to continue into the month...")
+    return state
 
 
 def run_game():
@@ -64,8 +447,9 @@ def run_game():
         if has_achieved_monopoly(state):
             clear_screen()
             print("=" * 75)
-            print("                   👑 VICTORY: GLOBAL MONOPOLY 👑                    ")
+            print("                   👑 VICTORY: CORPORATE HEGEMONY 👑                   ")
             print("=" * 75)
+            print(f" Difficulty Tier: {state['difficulty_name']}")
             print(f" Month Reached: {state['current_month']}")
             print(f" Final Capital: ${state['capital']:.2f}")
             print("=" * 75)
@@ -126,7 +510,6 @@ def run_game():
             print(f"   [2] Construct Factory Expansion (Structural upgrade: -${state['expansion_cost']} Cap)")
             print("   [3] Invest in R&D (Research Logistics, Efficiency, Safety, Marketing)")
 
-            # Dynamic display based on cooldown status
             if state["futures_cooldown_remaining"] > 0:
                 print(
                     f"   [4] Corporate Futures Contract [ON COOLDOWN: {state['futures_cooldown_remaining']} mos remaining]")
@@ -259,7 +642,7 @@ def run_game():
                 if state["futures_cooldown_remaining"] > 0:
                     print(
                         f"\n[!] Futures contract is on cooldown! ({state['futures_cooldown_remaining']} months remaining).")
-                    state["major_action_taken"] = False  # Refund action
+                    state["major_action_taken"] = False
                 else:
                     state["major_action_taken"] = True
                     state["futures_contract_active"] = True
@@ -604,8 +987,11 @@ def run_game():
             for log in action_logs:
                 print(log)
 
-            print(f"\n Advancing time cycle to Month {state['current_month']}...\n")
+            print(f"\n Advancing time cycle to Month {state['current_month']}...")
             input("\nPress Enter to begin the new month...")
+
+            # Roll for and trigger monthly event at the start of the new month
+            state = handle_monthly_event(state)
 
         elif choice == "9":
             clear_screen()

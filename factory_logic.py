@@ -31,6 +31,11 @@ def create_initial_game_state(difficulty_name, starting_capital, guaranteed_mont
         "futures_quota_target": 40,
         "futures_cooldown_remaining": 0,
         "market_price_multiplier": 20.0,
+        "futures_contracts_fulfilled": 0,
+
+        # Temporary Buffs/Debuffs from Events
+        "temporary_price_bonus": 1.0,
+        "temporary_refining_modifier": 0,
 
         # Turn Constraints & Special Flags
         "major_action_taken": False,
@@ -57,8 +62,27 @@ def is_bankrupt(game_state):
 
 
 def has_achieved_monopoly(game_state):
-    total_output_rate = 18 + (game_state["factory_expansion_tier"] * 15)
-    return game_state["capital"] >= 10000.0 and total_output_rate >= 100
+    """Evaluates difficulty-specific victory conditions."""
+    diff = game_state["difficulty_name"]
+    capital = game_state["capital"]
+    output_rate = 18 + (game_state["factory_expansion_tier"] * 15)
+
+    rd_levels = game_state["research_levels"]
+    maxed_techs_count = sum(1 for tier in rd_levels.values() if tier >= 4)
+    futures_count = game_state["futures_contracts_fulfilled"]
+
+    if diff == "Subsidized Startup":  # Easy
+        return capital >= 5000.0 and output_rate >= 50
+    elif diff == "Mid-Market":  # Normal
+        return capital >= 15000.0 and output_rate >= 120 and maxed_techs_count >= 2
+    elif diff == "Hostile Takeover":  # Hard
+        return (
+                capital >= 35000.0
+                and output_rate >= 250
+                and maxed_techs_count >= 4
+                and futures_count >= 3
+        )
+    return False
 
 
 def get_current_factory_title(game_state):
@@ -117,6 +141,7 @@ def execute_rd_investment(game_state, selected_field):
 
     elif selected_field == "safety":
         state["base_maintenance_cost"] += (2 + tier)
+        state["negative_event_chance"] = max(0.01, state["negative_event_chance"] - 0.04)
 
     return state
 
@@ -124,7 +149,7 @@ def execute_rd_investment(game_state, selected_field):
 def execute_sales_contract(game_state, quantity_to_sell):
     state = game_state.copy()
 
-    unit_price = state["market_price_multiplier"]
+    unit_price = state["market_price_multiplier"] * state["temporary_price_bonus"]
     if state["research_levels"]["logistics"] >= 2:
         unit_price *= 1.20
     if state["research_levels"]["logistics"] >= 3:
@@ -139,21 +164,53 @@ def execute_sales_contract(game_state, quantity_to_sell):
     state["finished_goods"] -= sold_amount
     state["capital"] += earned_revenue
     state["total_goods_sold_this_month"] += sold_amount
+    state["temporary_price_bonus"] = 1.0
 
     return state, earned_revenue, sold_amount
+
+
+def roll_monthly_event(state):
+    """Rolls among the 40 expanded events based on safety/risk modifiers."""
+    if random.random() > 0.50:
+        return None, None
+
+    safety_tier = state["research_levels"]["safety"]
+    dynamic_negative_chance = max(0.10, state["negative_event_chance"] - (safety_tier * 0.03))
+
+    is_positive = random.random() >= dynamic_negative_chance
+
+    positive_pool = [
+        "high_demand", "subsidy", "investor", "surplus", "innovation",
+        "logistics_breakthrough", "scrap_boom", "espionage_windfall", "angel_investor", "award",
+        "supply_surplus", "merger", "tech_leak", "drone_gift", "grid_rebate",
+        "patent_buyout", "skilled_labor", "luxury_contract", "tax_loophole", "trade_treaty"
+    ]
+
+    negative_pool = [
+        "strike", "audit", "brownout", "contamination", "circuit",
+        "piracy", "chemical_leak", "tax_hike", "subcontractor_drop", "espionage_breach",
+        "tremor", "pension_deficit", "counterfeit_ore", "customs_delay", "lawsuit",
+        "inflation", "lightning", "price_war", "union_slowdown", "obsolescence"
+    ]
+
+    if is_positive:
+        return True, random.choice(positive_pool)
+    else:
+        return False, random.choice(negative_pool)
 
 
 def process_end_of_month_rollover(game_state, cave_in_occurred):
     state = game_state.copy()
     action_logs = []
 
-    # 1. Decrement Futures Cooldown Timer
+    state["temporary_refining_modifier"] = 0
+
     if state["futures_cooldown_remaining"] > 0:
         state["futures_cooldown_remaining"] -= 1
 
-    # 2. Evaluate Futures Contract Quota
     if state["futures_contract_active"]:
         if state["total_goods_sold_this_month"] >= state["futures_quota_target"]:
+            state["futures_contracts_fulfilled"] += 1
             action_logs.append(
                 f" [Futures Contract Met]: Sold {state['total_goods_sold_this_month']} / "
                 f"{state['futures_quota_target']} goods. Quota fulfilled successfully!"
@@ -167,7 +224,6 @@ def process_end_of_month_rollover(game_state, cave_in_occurred):
             )
         state["futures_contract_active"] = False
 
-    # 3. Evaluate Marketing Quotas
     marketing_tier = state["research_levels"]["marketing"]
     quota_targets = {1: 50, 2: 70, 3: 90, 4: 120}
     quota_bonuses = {1: 0.05, 2: 0.10, 3: 0.15, 4: 0.25}
@@ -186,10 +242,9 @@ def process_end_of_month_rollover(game_state, cave_in_occurred):
                 f" [Marketing Quota Missed]: Sold {state['total_goods_sold_this_month']} / {target_qty} required goods."
             )
 
-    # 4. Passive Mining & Refining
     eff_tier = state["research_levels"]["efficiency"]
     mining_bonus = 0
-    refining_bonus = 0
+    refining_bonus = state["temporary_refining_modifier"]
 
     if eff_tier >= 3:
         mining_bonus += 20
@@ -218,11 +273,9 @@ def process_end_of_month_rollover(game_state, cave_in_occurred):
     state["finished_goods"] += actual_refined
     action_logs.append(f" Factory converted {actual_refined} raw materials into finished sellable goods.")
 
-    # 5. Maintenance Upkeep
     state["capital"] -= state["base_maintenance_cost"]
     action_logs.append(f" Deducted ${state['base_maintenance_cost']} monthly infrastructure maintenance cost.")
 
-    # 6. Rollover resets
     if state["operations_locked_turns"] > 0:
         state["operations_locked_turns"] -= 1
 
