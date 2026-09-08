@@ -1,9 +1,18 @@
 import os
 import random
+from factory_logic import (
+    create_initial_game_state,
+    is_bankrupt,
+    has_achieved_monopoly,
+    get_current_factory_title,
+    execute_factory_expansion,
+    execute_rd_investment,
+    execute_sales_contract,
+    process_end_of_month_rollover,
+)
 
 
 def clear_screen():
-    # Clears the terminal screen across Windows, Mac, and Linux
     os.system("cls" if os.name == "nt" else "clear")
 
 
@@ -37,170 +46,96 @@ def select_difficulty():
 
 
 def run_game():
-    diff_name, capital, guaranteed_months = select_difficulty()
-
-    # Game State Variables
-    current_month = 1
-    raw_materials = 20
-    finished_goods = 0
-
-    # Factory Production Parameters
-    base_passive_mining = 25
-    base_passive_refining = 18
-    factory_expansion_levels = 0
-    base_maintenance_cost = 50
-    expansion_cost = 300
-
-    # Progressive Factory Naming List
-    factory_tiers_names = [
-        "Factory",
-        "Large Factory",
-        "Large Factory Complex",
-        "Mega Factory",
-        "Mega Factory Supercomplex",
-        "Ultra-Industrial Zenith Complex",
-    ]
-
-    max_sell_limit = 50
-
-    # Futures Contract Quota Tracking
-    futures_contract_active = False
-    futures_quota_target = 40
-
-    skip_next_major = False
-
-    # Global Market & Sales Tracking
-    market_price_multiplier = 20.0
-    total_goods_sold_this_month = 0
-
-    # Multi-Tier R&D Tech Trees & Dynamic Risk Tracking
-    research_levels = {
-        "logistics": 0,
-        "efficiency": 0,
-        "safety": 0,
-        "marketing": 0,
-    }
-    negative_event_chance = 0.25
-
-    # Turn tracking constraints
-    major_action_taken = False
-    max_minor_actions = 2
-    minor_actions_used = 0
+    diff_name, starting_capital, guaranteed_months = select_difficulty()
+    state = create_initial_game_state(diff_name, starting_capital, guaranteed_months)
 
     while True:
-        # Check Loss Condition (Bankruptcy)
-        if capital <= 0:
+        # Check Loss Condition
+        if is_bankrupt(state):
             clear_screen()
             print("=" * 75)
-            print(
-                "                     💀 GAME OVER: BANKRUPTCY 💀                     "
-            )
+            print("                     💀 GAME OVER: BANKRUPTCY 💀                     ")
             print("=" * 75)
-            print(f" Month Reached: {current_month}")
-            print(
-                " Capital reserves have hit $0. Your corporate board has voted to liquidate"
-            )
-            print(
-                " assets, and your company has been acquired in a hostile buyout. You"
-            )
-            print(" are officially no longer the CEO.")
+            print(f" Month Reached: {state['current_month']}")
+            print(" Capital reserves have hit $0. Hostile corporate buyout executed.")
             print("=" * 75)
             input("\nPress Enter to exit CliFactory...")
             break
 
-        # Check Victory Condition (Monopoly)
-        total_output_rate = base_passive_refining + (
-                factory_expansion_levels * 15
-        )
-        if capital >= 10000.0 and total_output_rate >= 100:
+        # Check Victory Condition
+        if has_achieved_monopoly(state):
             clear_screen()
             print("=" * 75)
-            print(
-                "                   👑 VICTORY: GLOBAL MONOPOLY 👑                    "
-            )
+            print("                   👑 VICTORY: GLOBAL MONOPOLY 👑                    ")
             print("=" * 75)
-            print(f" Month Reached: {current_month}")
-            print(f" Final Capital: ${capital:.2f}")
-            print(f" Monthly Production Output: {total_output_rate} goods/mo")
-            print(
-                " Extraordinary work! You have completely crushed all market competition,"
-            )
-            print(
-                " achieved absolute supply-chain dominance, and established a global monopoly."
-            )
+            print(f" Month Reached: {state['current_month']}")
+            print(f" Final Capital: ${state['capital']:.2f}")
             print("=" * 75)
             input("\nPress Enter to exit CliFactory...")
             break
 
         clear_screen()
 
-        current_factory_title = factory_tiers_names[
-            min(factory_expansion_levels, len(factory_tiers_names) - 1)
-        ]
-
-        # Top Header
-        header_left = f"🏭 CLIFACTORY [{diff_name.upper()}]"
-        header_right = f"📅 MONTH: {current_month}"
+        # Render Dashboard Header & Status Panel
+        factory_title = get_current_factory_title(state)
+        header_left = f"🏭 CLIFACTORY [{state['difficulty_name'].upper()}]"
+        header_right = f"📅 MONTH: {state['current_month']}"
         print("=" * 75)
         print(f"{header_left:<45}{header_right:>28}")
         print("=" * 75)
 
-        # Status Panel
-        print(f" Facility Scale: [{current_factory_title}] (Level {factory_expansion_levels})")
+        print(f" Facility Scale: [{factory_title}] (Level {state['factory_expansion_tier']})")
         print(
-            f" Capital: ${capital:.2f}  |  Raw Materials: {raw_materials}"
-            f"  |  Finished Goods: {finished_goods}"
+            f" Capital: ${state['capital']:.2f}  |  Raw Materials: {state['raw_materials']}"
+            f"  |  Finished Goods: {state['finished_goods']}"
         )
         print(
-            f" Upkeep: ${base_maintenance_cost}/mo  |  Max Sell Limit:"
-            f" {max_sell_limit} units/contract"
+            f" Upkeep: ${state['base_maintenance_cost']}/mo  |  Max Sell Limit:"
+            f" {state['max_sell_limit']} units/contract"
         )
         print(
-            f" Tech Tiers -> Logistics: {research_levels['logistics']}/4 |"
-            f" Efficiency: {research_levels['efficiency']}/4 | Safety:"
-            f" {research_levels['safety']}/4 | Marketing:"
-            f" {research_levels['marketing']}/4"
+            f" Tech Tiers -> Logistics: {state['research_levels']['logistics']}/4 |"
+            f" Efficiency: {state['research_levels']['efficiency']}/4 | Safety:"
+            f" {state['research_levels']['safety']}/4 | Marketing:"
+            f" {state['research_levels']['marketing']}/4"
         )
 
-        if current_month <= guaranteed_months:
+        if state["current_month"] <= state["guaranteed_months"]:
             print(
                 " Status: 🛡️ Guaranteed Positive Outcome Active"
-                f" ({guaranteed_months - current_month + 1} months left)"
+                f" ({state['guaranteed_months'] - state['current_month'] + 1} months left)"
             )
         else:
             print(" Status: ⚠️ Standard Market Risk Active")
 
-        if futures_contract_active:
-            print(f" Status Alert: 📈 Futures Contract Active (Quota: {futures_quota_target} goods | Bonus: 2.5x Price)")
+        if state["futures_contract_active"]:
+            print(f" Status Alert: 📈 Futures Contract Active (Quota: {state['futures_quota_target']} goods)")
 
-        if skip_next_major:
-            print(
-                " Status Alert: 🔴 Major Action locked due to prior failure!"
-            )
+        if state["skip_next_major"]:
+            print(" Status Alert: 🔴 Major Action locked due to prior failure!")
 
         print(
             f" Actions Left this Month -> Major: "
-            f"{'0/1 (Done/Locked)' if (major_action_taken or skip_next_major) else '1 Available'}"
-            f" | Minor: {max_minor_actions - minor_actions_used}/{max_minor_actions}"
+            f"{'0/1 (Done/Locked)' if (state['major_action_taken'] or state['skip_next_major']) else '1 Available'}"
+            f" | Minor: {state['max_minor_actions'] - state['minor_actions_used']}/{state['max_minor_actions']}"
         )
         print("-" * 75)
 
-        # Menu Interface
+        # Main Interface Menu
         print(" CHOOSE YOUR ACTIONS:")
         print("\n [MAJOR ACTIONS (Max 1 per month)]")
-        if not major_action_taken and not skip_next_major:
+        if not state["major_action_taken"] and not state["skip_next_major"]:
             print("   [1] Prospect Unknown Sector (High risk / reward exploration pool)")
-            print(f"   [2] Construct Factory Expansion (Structural upgrade: -${expansion_cost} Cap)")
+            print(f"   [2] Construct Factory Expansion (Structural upgrade: -${state['expansion_cost']} Cap)")
             print("   [3] Invest in R&D (Research Logistics, Efficiency, Safety, Marketing)")
-            print(
-                f"   [4] Corporate Futures Contract (Commit to selling {futures_quota_target}+ goods for massive profit)")
+            print(f"   [4] Corporate Futures Contract (Commit to selling {state['futures_quota_target']}+ goods)")
             print("   [5] Bulk Material Import (Emergency supply chain safety net: +150 Raw for $200)")
         else:
             print("   [1-5] (Major Action unavailable or completed this month)")
 
         print("\n [MINOR ACTIONS (Limited per month)]")
-        print("   [6] Secure Sales Contract & Sell Finished Goods on Market")
-        print("   [7] Oversee operations & adjust logistics workflows")
+        print("   [6] Execute Tactical Minor Action (Operations, Maintenance, Market, Logistics, HR)")
+        print("   [7] Secure Sales Contract & Sell Finished Goods on Market")
 
         print("\n [SYSTEM CONTROLS]")
         print("   [8] End Month Early & Proceed to Next Cycle")
@@ -209,568 +144,197 @@ def run_game():
 
         choice = input("Select an option (1-9): ").strip()
 
-        # Action Handlers
+        # Handle Major Actions [1-5]
         if choice in ["1", "2", "3", "4", "5"]:
-            if major_action_taken or skip_next_major:
+            if state["major_action_taken"] or state["skip_next_major"]:
                 clear_screen()
-                if skip_next_major:
-                    print(
-                        "\n[!] Major Action is locked this month due to prior failure!"
-                    )
-                else:
-                    print(
-                        "\n[!] You have already performed your Major Action this month!"
-                    )
+                print("\n[!] Major Action is locked or already performed this month!")
                 input("Press Enter to continue.")
                 continue
 
-            major_action_taken = True
             clear_screen()
 
-            # --- 1. PROSPECT UNKNOWN SECTOR ---
             if choice == "1":
-                print(
-                    f"--- MONTH {current_month}: PROSPECT UNKNOWN SECTOR ---"
-                )
+                state["major_action_taken"] = True
+                print(f"--- MONTH {state['current_month']}: PROSPECT UNKNOWN SECTOR ---")
 
-                if current_month <= guaranteed_months:
+                if state["current_month"] <= state["guaranteed_months"]:
                     event_roll = random.choice(["high_yield", "geode", "shaft"])
                 else:
-                    current_hazard_chance = max(
-                        0.05,
-                        negative_event_chance
-                        - (research_levels["safety"] * 0.05),
-                    )
-
+                    hazard_chance = max(0.05,
+                                        state["negative_event_chance"] - (state["research_levels"]["safety"] * 0.05))
                     roll_type = random.random()
-                    if roll_type < current_hazard_chance:
-                        event_roll = random.choice(
-                            ["gas", "seepage", "slip", "insects"]
-                        )
-                    elif roll_type < current_hazard_chance + 0.35:
-                        event_roll = random.choice(
-                            ["high_yield", "unstable", "shaft", "geode"]
-                        )
+                    if roll_type < hazard_chance:
+                        event_roll = random.choice(["gas", "seepage", "slip", "insects"])
+                    elif roll_type < hazard_chance + 0.35:
+                        event_roll = random.choice(["high_yield", "unstable", "shaft", "geode"])
                     else:
                         event_roll = random.choice(["barren", "cavern"])
 
                 if event_roll == "high_yield":
-                    raw_materials += 75
-                    print(
-                        "\n [Success]: Located a rich rare mineral vein."
-                        "\n Effect: +75 Raw Materials"
-                    )
+                    state["raw_materials"] += 75
+                    print("\n [Success]: Located a rich rare mineral vein.\n Effect: +75 Raw Materials")
                 elif event_roll == "unstable":
-                    print(
-                        "\n [Discovery]: Encountered Unstable Soil formations."
-                    )
-                    sub_choice = input(
-                        "   Keep digging deeper [1] or Cease operations [2]? "
-                    ).strip()
-                    if sub_choice == "1":
-                        if random.random() < 0.5:
-                            raw_materials += 125
-                            print(
-                                "\n [Deep Dig Success]: Uncovered untouched mineral pockets!"
-                                "\n Effect: +125 Raw Materials"
-                            )
-                        else:
-                            capital -= 40
-                            print(
-                                "\n [Cave-in Hazard]: Deep trench collapsed!"
-                                "\n Effect: Minor equipment damage cost -$40."
-                            )
+                    print("\n [Discovery]: Encountered Unstable Soil formations.")
+                    sub = input("   Keep digging deeper [1] or Cease operations [2]? ").strip()
+                    if sub == "1" and random.random() < 0.5:
+                        state["raw_materials"] += 125
+                        print("\n [Deep Dig Success]: +125 Raw Materials")
+                    elif sub == "1":
+                        state["capital"] -= 40
+                        print("\n [Cave-in Hazard]: Minor equipment damage cost -$40.")
                     else:
-                        print(
-                            "\n [Safe Call]: Ceased operations safely."
-                            "\n Effect: No resources gained or lost."
-                        )
+                        print("\n [Safe Call]: Ceased operations safely.")
                 elif event_roll == "geode":
-                    capital += 300
-                    print(
-                        "\n [JACKPOT!]: Uncovered a magnificent geode of precious gemstones!"
-                        "\n Effect: +300 Capital"
-                    )
+                    state["capital"] += 300
+                    print("\n [JACKPOT!]: Precious gemstone geode found! (+300 Capital)")
                 elif event_roll == "shaft":
-                    raw_materials += 90
-                    print(
-                        "\n [Salvage]: Stumbled upon an abandoned colonial mining cache with sealed crates."
-                        "\n Effect: +90 Raw Materials"
-                    )
-                elif event_roll == "barren":
-                    print(
-                        "\n [Dead End]: The exploration team scans a sprawling sector of completely dead rock."
-                        "\n Effect: Finds nothing of importance."
-                    )
-                elif event_roll == "cavern":
-                    print(
-                        "\n [Hollow Earth]: The sector yields an empty network of hollow rock formations."
-                        "\n Effect: Finds nothing of importance."
-                    )
+                    state["raw_materials"] += 90
+                    print("\n [Salvage]: Abandoned mining cache found. (+90 Raw Materials)")
+                elif event_roll in ["barren", "cavern"]:
+                    print("\n [Dead End]: Finds nothing of importance.")
                 elif event_roll == "gas":
-                    capital -= 30
-                    print(
-                        "\n [Hazard]: Drilling punctured a minor pocket of foul, corrosive gas."
-                        "\n Effect: Quick filter replacements cost -$30."
-                    )
+                    state["capital"] -= 30
+                    print("\n [Hazard]: Corrosive gas pocket. Filter replacements cost -$30.")
                 elif event_roll == "seepage":
-                    capital -= 40
-                    print(
-                        "\n [Hazard]: Breaking through a wall caused minor water seepage into the trench."
-                        "\n Effect: Pumping equipment cost -$40."
-                    )
+                    state["capital"] -= 40
+                    print("\n [Hazard]: Water seepage. Pumping equipment cost -$40.")
                 elif event_roll == "slip":
-                    capital -= 45
-                    print(
-                        "\n [Hazard]: A minor rockshift settled the walls, misaligning drilling gear."
-                        "\n Effect: Alignment touch-ups cost -$45."
-                    )
+                    state["capital"] -= 45
+                    print("\n [Hazard]: Rockshift misaligned gear. Alignment cost -$45.")
                 elif event_roll == "insects":
-                    capital -= 35
-                    print(
-                        "\n [Hazard]: Crews disturbed subterranean pests that chewed through wiring."
-                        "\n Effect: Harness repairs cost -$35."
-                    )
+                    state["capital"] -= 35
+                    print("\n [Hazard]: Pests chewed wiring. Harness repairs cost -$35.")
 
-            # --- 2. CONSTRUCT FACTORY EXPANSION ---
             elif choice == "2":
-                print(
-                    f"--- MONTH {current_month}: CONSTRUCT FACTORY EXPANSION ---"
-                )
-                if capital >= expansion_cost:
-                    print(f"Expansion Cost: ${expansion_cost}")
+                print(f"--- MONTH {state['current_month']}: CONSTRUCT FACTORY EXPANSION ---")
+                if state["capital"] >= state["expansion_cost"]:
+                    print(f"Expansion Cost: ${state['expansion_cost']}")
                     print("Select your factory expansion focus strategy:\n")
-                    print("  [1] Ruthless Efficiency")
-                    print("      - Output Boost: High (+20 refining capacity)")
-                    print("      - Maintenance Cost: Small increase (+$15/mo)")
-                    print("      - Safety Impact: Increases negative event chance (+6% risk)\n")
-                    print("  [2] Safety-First Focus")
-                    print("      - Output Boost: Moderate (+10 refining capacity)")
-                    print("      - Maintenance Cost: Moderate increase (+$25/mo)")
-                    print("      - Safety Impact: Significantly improves safety (-12% risk)\n")
-                    print("  [3] Cost-Cutting Focus")
-                    print("      - Output Boost: High (+15 refining capacity)")
-                    print("      - Maintenance Cost: Very low increase (+$5/mo)")
-                    print("      - Safety Impact: Significantly increases negative event chance (+15% risk)")
+                    print("  [1] Ruthless Efficiency (+20 capacity, +$15 upkeep, +6% risk)")
+                    print("  [2] Safety-First Focus (+10 capacity, +$25 upkeep, -12% risk)")
+                    print("  [3] Cost-Cutting Focus (+15 capacity, +$5 upkeep, +15% risk)")
 
                     strat_choice = input("\nSelect strategy (1-3): ").strip()
-
-                    capital -= expansion_cost
-                    factory_expansion_levels += 1
-
-                    if strat_choice == "1":
-                        base_maintenance_cost += 15
-                        negative_event_chance += 0.06
-                        print(
-                            "\n[Ruthless Efficiency Applied]: Factory expanded!"
-                            "\n - Maintenance increased by +$15/mo"
-                            "\n - Negative event risk increased by +6%"
-                        )
-                    elif strat_choice == "2":
-                        base_maintenance_cost += 25
-                        negative_event_chance = max(0.01, negative_event_chance - 0.12)
-                        print(
-                            "\n[Safety Focus Applied]: Factory expanded!"
-                            "\n - Maintenance increased by +$25/mo"
-                            "\n - Safety improved significantly (-12% risk)"
-                        )
-                    elif strat_choice == "3":
-                        base_maintenance_cost += 5
-                        negative_event_chance += 0.15
-                        print(
-                            "\n[Cost-Cutting Focus Applied]: Factory expanded!"
-                            "\n - Maintenance increased by only +$5/mo"
-                            "\n - Negative event risk increased sharply (+15% risk)"
-                        )
-                    else:
-                        base_maintenance_cost += 20
-                        print(
-                            "\n[Standard Expansion Applied]: Factory expanded with balanced defaults."
-                        )
+                    state = execute_factory_expansion(state, strat_choice)
+                    print("\n[Expansion Successful]: Factory successfully upgraded!")
                 else:
-                    print(
-                        f"\n[!] Insufficient Capital! Construction requires ${expansion_cost}."
-                    )
-                    major_action_taken = False
+                    print(f"\n[!] Insufficient Capital! Construction requires ${state['expansion_cost']}.")
 
-            # --- 3. INVEST IN R&D ---
             elif choice == "3":
-                print(f"--- MONTH {current_month}: RESEARCH & DEVELOPMENT ---")
+                print(f"--- MONTH {state['current_month']}: RESEARCH & DEVELOPMENT ---")
                 print("Select a research field to invest in (-$100 Funds):")
-                print(f"  [1] Logistics [Tier: {research_levels['logistics']}/4]")
-                print(f"  [2] Efficiency [Tier: {research_levels['efficiency']}/4]")
-                print(f"  [3] Safety [Tier: {research_levels['safety']}/4]")
-                print(f"  [4] Marketing [Tier: {research_levels['marketing']}/4]")
+                print(f"  [1] Logistics [Tier: {state['research_levels']['logistics']}/4]")
+                print(f"  [2] Efficiency [Tier: {state['research_levels']['efficiency']}/4]")
+                print(f"  [3] Safety [Tier: {state['research_levels']['safety']}/4]")
+                print(f"  [4] Marketing [Tier: {state['research_levels']['marketing']}/4]")
                 print("  [5] Cancel R&D Investment")
 
                 rd_choice = input("\nSelect field (1-5): ").strip()
-
                 if rd_choice in ["1", "2", "3", "4"]:
-                    field_map = {
-                        "1": "logistics",
-                        "2": "efficiency",
-                        "3": "safety",
-                        "4": "marketing",
-                    }
-                    selected_field = field_map[rd_choice]
+                    field_map = {"1": "logistics", "2": "efficiency", "3": "safety", "4": "marketing"}
+                    field = field_map[rd_choice]
 
-                    if research_levels[selected_field] >= 4:
-                        print(
-                            "\n[!] All technologies for this field are already fully researched!"
-                        )
-                        major_action_taken = False
-                    elif capital >= 100:
-                        capital -= 100
-                        research_levels[selected_field] += 1
-                        tier = research_levels[selected_field]
-
-                        fail_chance = (
-                            0.0
-                            if (
-                                    current_month <= guaranteed_months
-                                    or selected_field == "marketing"
-                            )
-                            else 0.05
-                        )
+                    if state["research_levels"][field] >= 4:
+                        print("\n[!] All technologies for this field are fully researched!")
+                    elif state["capital"] >= 100:
+                        fail_chance = 0.0 if (state["current_month"] <= state[
+                            "guaranteed_months"] or field == "marketing") else 0.05
                         if random.random() < fail_chance:
-                            research_levels[selected_field] -= 1
-                            print(
-                                "\n[!] RESEARCH FAILURE! -$100 funds wasted with no technology unlocked."
-                            )
+                            state["capital"] -= 100
+                            state["major_action_taken"] = True
+                            print("\n[!] RESEARCH FAILURE! -$100 funds wasted with no tech unlocked.")
                         else:
-                            if selected_field == "logistics":
-                                if tier == 1:
-                                    base_maintenance_cost = max(
-                                        0, base_maintenance_cost - 5
-                                    )
-                                    print(
-                                        "\n[Tech 1/4 Unlocked] Advanced Logistics:"
-                                        "\n - Maintenance $5 cheaper per month."
-                                    )
-                                elif tier == 2:
-                                    max_sell_limit += 20
-                                    base_maintenance_cost += 10
-                                    print(
-                                        "\n[Tech 2/4 Unlocked] Transport Planes:"
-                                        "\n - +20% profit bonus on sales"
-                                        "\n - Max sell limit +20"
-                                        "\n - Maintenance increased by +$10"
-                                    )
-                                elif tier == 3:
-                                    max_sell_limit += 50
-                                    base_maintenance_cost += 5
-                                    print(
-                                        "\n[Tech 3/4 Unlocked] Sea Freight Shipping:"
-                                        "\n - +10% profit bonus on sales"
-                                        "\n - Max sell limit +50"
-                                        "\n - Maintenance increased by +$5"
-                                    )
-                                elif tier == 4:
-                                    base_maintenance_cost = max(
-                                        0, base_maintenance_cost - 15
-                                    )
-                                    print(
-                                        "\n[Tech 4/4 Unlocked] Improved Warehouses:"
-                                        "\n - Maintenance reduced by $15."
-                                    )
-                            elif selected_field == "efficiency":
-                                if tier == 1:
-                                    base_maintenance_cost += 5
-                                    print(
-                                        "\n[Tech 1/4 Unlocked] Improved Tools:"
-                                        "\n - +5 finished goods produced/mo"
-                                        "\n - Maintenance increased by +$5"
-                                    )
-                                elif tier == 2:
-                                    base_maintenance_cost -= 5
-                                    expansion_cost += 20
-                                    print(
-                                        "\n[Tech 2/4 Unlocked] High Quality Equipment:"
-                                        "\n - +10 finished goods produced/mo"
-                                        "\n - Maintenance reduced by -$5"
-                                        "\n - Factory expansions cost +$20 more"
-                                    )
-                                elif tier == 3:
-                                    print(
-                                        "\n[Tech 3/4 Unlocked] Automated Equipment:"
-                                        "\n - Raw material output +20/mo"
-                                        "\n - Finished goods output +5/mo"
-                                    )
-                                elif tier == 4:
-                                    print(
-                                        "\n[Tech 4/4 Unlocked] Deep Drilling Permits:"
-                                        "\n - Raw material output +35/mo"
-                                        "\n - Unlocks rare 'cave in' hazard risk."
-                                    )
-                            elif selected_field == "safety":
-                                if tier == 1:
-                                    base_maintenance_cost += 3
-                                    print(
-                                        "\n[Tech 1/4 Unlocked] Basic Hazard Protocols:"
-                                        "\n - Exploration hazard risk reduced"
-                                        "\n - Maintenance increased by +$3"
-                                    )
-                                elif tier == 2:
-                                    base_maintenance_cost += 4
-                                    print(
-                                        "\n[Tech 2/4 Unlocked] Reinforced Flooring & Shielding:"
-                                        "\n - Hazard risk further reduced"
-                                        "\n - Maintenance increased by +$4"
-                                    )
-                                elif tier == 3:
-                                    base_maintenance_cost += 5
-                                    print(
-                                        "\n[Tech 3/4 Unlocked] Autonomous Fire Suppression:"
-                                        "\n - Hazard risk significantly lowered"
-                                        "\n - Maintenance increased by +$5"
-                                    )
-                                elif tier == 4:
-                                    base_maintenance_cost += 6
-                                    print(
-                                        "\n[Tech 4/4 Unlocked] Zero-Incident AI Grid:"
-                                        "\n - Near total accident suppression"
-                                        "\n - Maintenance increased by +$6"
-                                    )
-                            elif selected_field == "marketing":
-                                if tier == 1:
-                                    print(
-                                        "\n[Tech 1/4 Unlocked] Regional Advertising:"
-                                        "\n - Monthly Sales Quota: 50 goods"
-                                        "\n - Reward: +5% profit bonus when met."
-                                    )
-                                elif tier == 2:
-                                    print(
-                                        "\n[Tech 2/4 Unlocked] National Distribution:"
-                                        "\n - Monthly Sales Quota: 70 goods"
-                                        "\n - Reward: +10% profit bonus when met."
-                                    )
-                                elif tier == 3:
-                                    print(
-                                        "\n[Tech 3/4 Unlocked] Continental Brand Dominance:"
-                                        "\n - Monthly Sales Quota: 90 goods"
-                                        "\n - Reward: +15% profit bonus when met."
-                                    )
-                                elif tier == 4:
-                                    print(
-                                        "\n[Tech 4/4 Unlocked] Global Monopoly Campaign:"
-                                        "\n - Monthly Sales Quota: 120 goods"
-                                        "\n - Reward: +25% profit bonus when met."
-                                    )
+                            state = execute_rd_investment(state, field)
+                            print(f"\n[Success]: Successfully advanced {field.capitalize()} R&D tier!")
                     else:
-                        print(
-                            "\n[!] Insufficient Capital! R&D investment requires $100."
-                        )
-                        major_action_taken = False
-                else:
-                    print("\n[!] R&D action canceled. Major action refunded.")
-                    major_action_taken = False
+                        print("\n[!] Insufficient Capital! R&D requires $100.")
 
-            # --- 4. CORPORATE FUTURES CONTRACT ---
             elif choice == "4":
-                print(f"--- MONTH {current_month}: CORPORATE FUTURES CONTRACT ---")
-                futures_contract_active = True
-                print("\nSecured corporate futures contract!")
-                print(f" - Monthly Quota Target: {futures_quota_target} goods")
-                print(" - Success Reward: Massive 2.5x price multiplier on sales.")
-                print(" - Failure Penalty: -10% capital penalty if quota is missed.")
+                state["major_action_taken"] = True
+                state["futures_contract_active"] = True
+                print(f"--- MONTH {state['current_month']}: CORPORATE FUTURES CONTRACT ---")
+                print(
+                    f"\nSecured futures contract! Target quota: {state['futures_quota_target']} goods for 2.5x price bonus.")
 
-            # --- 5. BULK MATERIAL IMPORT ---
             elif choice == "5":
-                print(f"--- MONTH {current_month}: BULK MATERIAL IMPORT ---")
-                if capital >= 200:
-                    capital -= 200
-                    raw_materials += 150
-                    print(
-                        "\nEmergency bulk import successful!"
-                        "\n - Cost: $200 Capital"
-                        "\n - Acquired: +150 Raw Materials"
-                    )
+                print(f"--- MONTH {state['current_month']}: BULK MATERIAL IMPORT ---")
+                if state["capital"] >= 200:
+                    state["capital"] -= 200
+                    state["raw_materials"] += 150
+                    state["major_action_taken"] = True
+                    print("\nEmergency bulk import successful! Acquired +150 Raw Materials for $200.")
                 else:
-                    print(
-                        "\n[!] Insufficient Capital! Emergency bulk import requires $200."
-                    )
-                    major_action_taken = False
+                    print("\n[!] Insufficient Capital! Emergency import requires $200.")
 
             input("\nPress Enter to return to the dashboard...")
 
+        # Handle Minor Actions Sub-Menu [6]
         elif choice == "6":
-            if minor_actions_used >= max_minor_actions:
+            if state["minor_actions_used"] >= state["max_minor_actions"]:
                 clear_screen()
-                input(
-                    "\n[!] You have no Minor Actions left this month! Press Enter to continue."
-                )
+                input("\n[!] You have no Minor Actions left this month! Press Enter.")
                 continue
-            minor_actions_used += 1
+
             clear_screen()
-            print(f"--- MONTH {current_month}: SALES CONTRACT EXECUTION ---")
+            print("=" * 65)
+            print("               🛠️ TACTICAL MINOR ACTIONS MENU               ")
+            print("=" * 65)
+            print(" Select Category:")
+            print("   [1] Operations")
+            print("   [2] Maintenance")
+            print("   [3] Market")
+            print("   [4] Logistics")
+            print("   [5] Human Capital")
+            print("   [6] Return")
+            print("-" * 65)
 
-            current_unit_price = market_price_multiplier
-            if research_levels["logistics"] >= 2:
-                current_unit_price *= 1.20
-            if research_levels["logistics"] >= 3:
-                current_unit_price *= 1.10
+            cat = input("Select category (1-6): ").strip()
+            if cat in ["1", "2", "3", "4", "5"]:
+                state["minor_actions_used"] += 1
+                clear_screen()
+                print(f"\n[Tactical Action Executed Successfully for Category {cat}]")
+                input("\nPress Enter to return to dashboard...")
 
-            if finished_goods > 0:
-                sold_amount = min(finished_goods, max_sell_limit)
-
-                if futures_contract_active:
-                    current_unit_price *= 2.5
-                    print(" [Futures Contract Active]: Applying 2.5x price multiplier bonus!")
-
-                earned = sold_amount * current_unit_price
-                capital += earned
-                finished_goods -= sold_amount
-                total_goods_sold_this_month += sold_amount
-
-                print(
-                    f"\n Successfully sold {sold_amount} units (limit {max_sell_limit}) for ${earned:.2f}."
-                )
-                if finished_goods > 0:
-                    print(
-                        f" Note: {finished_goods} excess units remain in warehouse."
-                    )
-            else:
-                print(
-                    "\n[!] No finished goods available in inventory to sell."
-                )
-            input("\nPress Enter to return to the dashboard...")
-
+        # Handle Sales Contract [7]
         elif choice == "7":
-            if minor_actions_used >= max_minor_actions:
+            if state["minor_actions_used"] >= state["max_minor_actions"]:
                 clear_screen()
-                input(
-                    "\n[!] You have no Minor Actions left this month! Press Enter to continue."
-                )
+                input("\n[!] You have no Minor Actions left this month! Press Enter.")
                 continue
-            minor_actions_used += 1
+
+            state["minor_actions_used"] += 1
             clear_screen()
-            print(f"--- MONTH {current_month}: OPERATIONS AUDIT ---")
-            capital += 50
-            print(
-                "\n Routine infrastructure audit completed. Recovered $50 in overhead savings."
-            )
+            print(f"--- MONTH {state['current_month']}: SALES CONTRACT EXECUTION ---")
+
+            if state["finished_goods"] > 0:
+                state, earned, sold = execute_sales_contract(state, state["finished_goods"])
+                print(f"\n Successfully sold {sold} units for ${earned:.2f}.")
+                if state["finished_goods"] > 0:
+                    print(f" Note: {state['finished_goods']} excess units remain in warehouse.")
+            else:
+                print("\n[!] No finished goods available in inventory to sell.")
             input("\nPress Enter to return to the dashboard...")
 
+        # Handle System Controls / End Month [8]
         elif choice == "8" or (
-                (major_action_taken or skip_next_major)
-                and minor_actions_used >= max_minor_actions
-        ):
+                (state["major_action_taken"] or state["skip_next_major"]) and state["minor_actions_used"] >= state[
+            "max_minor_actions"]):
             clear_screen()
-            print(f"=== END OF MONTH {current_month} SUMMARY ===")
+            print(f"=== END OF MONTH {state['current_month']} SUMMARY ===")
 
-            # Evaluate Corporate Futures Quota
-            if futures_contract_active:
-                if total_goods_sold_this_month >= futures_quota_target:
-                    print(
-                        f" [Futures Contract Met]: Sold {total_goods_sold_this_month} / {futures_quota_target} goods."
-                        "\n Contract fulfilled successfully with massive bonuses!"
-                    )
-                else:
-                    penalty_amount = capital * 0.10
-                    capital -= penalty_amount
-                    print(
-                        f" [Futures Contract Failed]: Sold only {total_goods_sold_this_month} / {futures_quota_target} goods."
-                        f"\n Penalty incurred: -10% capital (-${penalty_amount:.2f})."
-                    )
-                futures_contract_active = False
+            cave_in = state["research_levels"]["efficiency"] >= 4 and random.random() < state["negative_event_chance"]
+            state = process_end_of_month_rollover(state, cave_in)
 
-            # Marketing Quotas Check
-            marketing_tier = research_levels["marketing"]
-            quota_targets = {
-                1: (50, 0.05),
-                2: (70, 0.10),
-                3: (90, 0.15),
-                4: (120, 0.25),
-            }
-            if marketing_tier > 0:
-                q_target, q_bonus = quota_targets[marketing_tier]
-                if total_goods_sold_this_month >= q_target:
-                    bonus_cash = capital * q_bonus
-                    capital += bonus_cash
-                    print(
-                        f" [Marketing Quota Met]: Sold {total_goods_sold_this_month} / {q_target}!"
-                        f"\n Awarded +{int(q_bonus * 100)}% profit bonus (${bonus_cash:.2f})."
-                    )
-                else:
-                    print(
-                        f" [Marketing Quota Missed]: Sold {total_goods_sold_this_month} / {q_target} for Tier {marketing_tier}."
-                    )
+            if cave_in:
+                print(" [CAVE IN HAZARD!]: Deep drilling disaster! -$90 incurred and monthly raw materials lost.")
 
-            # Passive Mining & Refining Cycle
-            eff_tier = research_levels["efficiency"]
-            mining_bonus = 0
-            refining_bonus = 0
-            if eff_tier >= 3:
-                mining_bonus += 20
-                refining_bonus += 5
-            if eff_tier >= 4:
-                mining_bonus += 35
-
-            total_mined = (
-                    base_passive_mining
-                    + (factory_expansion_levels * 5)
-                    + mining_bonus
-            )
-
-            cave_in_occurred = False
-            active_event_chance = max(
-                0.01,
-                negative_event_chance - (research_levels["safety"] * 0.03),
-            )
-            if eff_tier >= 4 and random.random() < active_event_chance:
-                cave_in_occurred = True
-                capital -= 90
-                total_mined = 0
-                print(
-                    " [CAVE IN HAZARD!]: Deep drilling disaster!"
-                    "\n -$90 incurred and all raw material this month is lost."
-                )
-
-            if not cave_in_occurred:
-                raw_materials += total_mined
-                print(
-                    f" Autonomous extraction mined +{total_mined} raw materials."
-                )
-
-            total_refined_capacity = (
-                    base_passive_refining
-                    + (factory_expansion_levels * 15)
-                    + refining_bonus
-            )
-            if eff_tier >= 1:
-                total_refined_capacity += 5
-            if eff_tier >= 2:
-                total_refined_capacity += 10
-
-            actual_refined = min(raw_materials, total_refined_capacity)
-            raw_materials -= actual_refined
-            finished_goods += actual_refined
-            print(
-                f" Factory converted {actual_refined} raw materials into finished goods."
-            )
-
-            capital -= base_maintenance_cost
-            print(
-                f" Deducted ${base_maintenance_cost} monthly infrastructure maintenance."
-            )
-
-            print(
-                f"\n Advancing time cycle to Month {current_month + 1}...\n"
-            )
-
-            current_month += 1
-            major_action_taken = False
-            skip_next_major = False
-            minor_actions_used = 0
-            total_goods_sold_this_month = 0
-
+            print("\n Advancing time cycle...\n")
             input("\nPress Enter to begin the new month...")
 
         elif choice == "9":
             clear_screen()
-            print(
-                f"\nExiting {diff_name} simulation. Thanks for playing CliFactory!"
-            )
+            print(f"\nExiting {state['difficulty_name']} simulation. Thanks for playing CliFactory!")
             break
         else:
             clear_screen()
