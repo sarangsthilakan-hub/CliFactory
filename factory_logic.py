@@ -62,7 +62,6 @@ def is_bankrupt(game_state):
 
 
 def has_achieved_monopoly(game_state):
-    """Evaluates difficulty-specific victory conditions."""
     diff = game_state["difficulty_name"]
     capital = game_state["capital"]
     output_rate = 18 + (game_state["factory_expansion_tier"] * 15)
@@ -91,6 +90,19 @@ def get_current_factory_title(game_state):
     return tiers[tier_index]
 
 
+def calculate_effective_risk(game_state):
+    """Centralized risk calculator with strict caps (5% floor, 100% ceiling)."""
+    safety_tier = game_state["research_levels"]["safety"]
+    risk = game_state["negative_event_chance"] - (safety_tier * 0.04)
+    return max(0.05, min(1.0, risk))
+
+
+def evaluate_minor_action_risk(game_state):
+    """Returns True if a risky minor action triggers its negative consequence."""
+    effective_risk = calculate_effective_risk(game_state)
+    return random.random() < effective_risk
+
+
 def execute_factory_expansion(game_state, strategy_type):
     state = game_state.copy()
     state["capital"] -= state["expansion_cost"]
@@ -102,13 +114,15 @@ def execute_factory_expansion(game_state, strategy_type):
         state["negative_event_chance"] += 0.06
     elif strategy_type == "2":  # Safety-First Focus
         state["base_maintenance_cost"] += 25
-        state["negative_event_chance"] = max(0.01, state["negative_event_chance"] - 0.12)
+        state["negative_event_chance"] -= 0.12
     elif strategy_type == "3":  # Cost-Cutting Focus
         state["base_maintenance_cost"] += 5
         state["negative_event_chance"] += 0.15
     else:  # Balanced Default
         state["base_maintenance_cost"] += 20
 
+    # Enforce strict ceiling and floor on risk
+    state["negative_event_chance"] = max(0.05, min(1.0, state["negative_event_chance"]))
     return state
 
 
@@ -141,7 +155,8 @@ def execute_rd_investment(game_state, selected_field):
 
     elif selected_field == "safety":
         state["base_maintenance_cost"] += (2 + tier)
-        state["negative_event_chance"] = max(0.01, state["negative_event_chance"] - 0.04)
+        state["negative_event_chance"] -= 0.04
+        state["negative_event_chance"] = max(0.05, min(1.0, state["negative_event_chance"]))
 
     return state
 
@@ -170,13 +185,11 @@ def execute_sales_contract(game_state, quantity_to_sell):
 
 
 def roll_monthly_event(state):
-    """Rolls among the 40 expanded events based on safety/risk modifiers."""
     if random.random() > 0.50:
         return None, None
 
     safety_tier = state["research_levels"]["safety"]
-    dynamic_negative_chance = max(0.10, state["negative_event_chance"] - (safety_tier * 0.03))
-
+    dynamic_negative_chance = max(0.10, state["negative_event_chance"] - (safety_tier * 0.04))
     is_positive = random.random() >= dynamic_negative_chance
 
     positive_pool = [
